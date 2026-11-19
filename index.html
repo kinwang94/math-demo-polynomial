@@ -7,6 +7,108 @@
 <meta name="description" content="逐步觀察單項式組成多項式，數項，找出最高次數。">
 <title>多項式動畫</title>
 <style>
+/* Polynomial Math Variables is a renamed subset of STIX Two Math.
+Source: https://github.com/google/fonts/tree/main/ofl/stixtwomath
+
+Copyright 2001-2021 The STIX Fonts Project Authors (https://github.com/stipub/stixfonts), with Reserved Font Name "TM Math". STIX Fonts™ is a trademark of The Institute of Electrical and Electronics Engineers, Inc.
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+This license is copied below, and is also available with a FAQ at:
+http://scripts.sil.org/OFL
+
+-----------------------------------------------------------
+SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
+-----------------------------------------------------------
+
+PREAMBLE
+The goals of the Open Font License (OFL) are to stimulate worldwide
+development of collaborative font projects, to support the font creation
+efforts of academic and linguistic communities, and to provide a free and
+open framework in which fonts may be shared and improved in partnership
+with others.
+
+The OFL allows the licensed fonts to be used, studied, modified and
+redistributed freely as long as they are not sold by themselves. The
+fonts, including any derivative works, can be bundled, embedded, 
+redistributed and/or sold with any software provided that any reserved
+names are not used by derivative works. The fonts and derivatives,
+however, cannot be released under any other type of license. The
+requirement for fonts to remain under this license does not apply
+to any document created using the fonts or their derivatives.
+
+DEFINITIONS
+"Font Software" refers to the set of files released by the Copyright
+Holder(s) under this license and clearly marked as such. This may
+include source files, build scripts and documentation.
+
+"Reserved Font Name" refers to any names specified as such after the
+copyright statement(s).
+
+"Original Version" refers to the collection of Font Software components as
+distributed by the Copyright Holder(s).
+
+"Modified Version" refers to any derivative made by adding to, deleting,
+or substituting -- in part or in whole -- any of the components of the
+Original Version, by changing formats or by porting the Font Software to a
+new environment.
+
+"Author" refers to any designer, engineer, programmer, technical
+writer or other person who contributed to the Font Software.
+
+PERMISSION & CONDITIONS
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of the Font Software, to use, study, copy, merge, embed, modify,
+redistribute, and sell modified and unmodified copies of the Font
+Software, subject to the following conditions:
+
+1) Neither the Font Software nor any of its individual components,
+in Original or Modified Versions, may be sold by itself.
+
+2) Original or Modified Versions of the Font Software may be bundled,
+redistributed and/or sold with any software, provided that each copy
+contains the above copyright notice and this license. These can be
+included either as stand-alone text files, human-readable headers or
+in the appropriate machine-readable metadata fields within text or
+binary files as long as those fields can be easily viewed by the user.
+
+3) No Modified Version of the Font Software may use the Reserved Font
+Name(s) unless explicit written permission is granted by the corresponding
+Copyright Holder. This restriction only applies to the primary font name as
+presented to the users.
+
+4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font
+Software shall not be used to promote, endorse or advertise any
+Modified Version, except to acknowledge the contribution(s) of the
+Copyright Holder(s) and the Author(s) or with their explicit written
+permission.
+
+5) The Font Software, modified or unmodified, in part or in whole,
+must be distributed entirely under this license, and must not be
+distributed under any other license. The requirement for fonts to
+remain under this license does not apply to any document created
+using the Font Software.
+
+TERMINATION
+This license becomes null and void if any of the above conditions are
+not met.
+
+DISCLAIMER
+THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
+OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
+DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
+OTHER DEALINGS IN THE FONT SOFTWARE.
+*/
+@font-face {
+  font-family: "Polynomial Math Variables";
+  src: url("data:font/woff;base64,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") format("woff");
+  font-style: normal; font-weight: 400; font-display: block;
+  unicode-range: U+0061-007A, U+210E, U+1D44E-1D467;
+}
 :root {
   color-scheme: light;
   --paper: #edf3fa;
@@ -229,18 +331,16 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
 .solve-board [data-family="b"] { --family-text: #604593; --family-fill: #f1ecfc; --family-edge: #dacef1; }
 .solve-condition-keyword { display: inline-block; margin-inline: .07em; padding: .05em .23em; border-radius: .25em; background: var(--family-fill, #fff0c6); color: var(--family-text, #764308); font-weight: 800; }
 .solve-board[data-solve-active] .solve-term[data-family] { color: var(--family-text); background: var(--family-fill); border-color: var(--family-edge); }
-.solve-combination { max-width: 740px; margin: 0 auto 14px; border-top: 1px solid var(--line); padding-top: 9px; }
-.solve-combination-label { color: var(--muted); font-size: .875rem; font-weight: 700; }
-.solve-combination .solve-expression { min-height: 0; margin: 5px 0 0; }
+#solve-panel[data-find-step] .steps { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.solve-board[data-finding] .solve-term[data-family] { color: inherit; background: transparent; border-color: var(--family-text); }
+.solve-setup-note { max-width: 740px; margin: 0 auto 14px; color: var(--ink); font-size: .9375rem; text-align: left; }
 .solve-method { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: 740px; margin-inline: auto; }
 .solve-constraint { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 13px 15px; border-radius: 7px; background: var(--family-fill); border: 1px solid var(--family-edge); color: var(--family-text); text-align: left; }
 .solve-constraint-label { font-size: .9375rem; font-weight: 700; }
 .solve-reason { color: var(--ink); font-size: .9375rem; line-height: 1.6; }
-.solve-cases { margin: 0; padding-inline-start: 1.25em; color: var(--ink); font-size: .9375rem; line-height: 1.55; }
-.solve-cases li + li { margin-top: 3px; }
-.solve-reason var, .solve-cases var, .solve-hint var { font-family: var(--math); }
+.solve-reason var, .solve-hint var { font-family: var(--math); }
 .solve-equation, .solve-value { font: clamp(1.125rem, 2.8vw, 1.65rem)/1.24 var(--math); }
-.solve-combine, .solve-check { font: clamp(1rem, 2.1vw, 1.25rem)/1.3 var(--math); }
+.solve-check { font: clamp(1rem, 2.1vw, 1.25rem)/1.3 var(--math); }
 .solve-value { font-weight: 700; }
 .solve-hint { min-height: 1.5em; max-width: 740px; margin: 12px auto 0; color: var(--muted); font-size: .9375rem; text-wrap: pretty; }
 .solve-hint .math { font-size: 1.15em; }
@@ -281,8 +381,15 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   .steps button { font-size: .8125rem; padding-inline: 1px; }
   [data-step="0"] .term-list { gap: 8px; }
 }
+.tile var, .polynomial-variables var, .solve-board var {
+  font-family: "Polynomial Math Variables", var(--math);
+  font-style: normal;
+}
 @supports (text-transform: math-auto) {
-  :is(.tile, .polynomial-variables, .solve-board) var { font-style: normal; text-transform: math-auto; }
+  .tile var, .polynomial-variables var, .solve-board var {
+    font-family: "Cambria Math", "Polynomial Math Variables", var(--math);
+    text-transform: math-auto;
+  }
 }
 </style>
 </head>
@@ -345,19 +452,17 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   </section>
   <section class="panel" id="solve-panel" aria-label="求參數示範" hidden>
     <nav class="steps" aria-label="推理步驟">
-      <button type="button" data-solve-step="0" aria-current="step">題目</button>
-      <button type="button" data-solve-step="1">列式</button>
-      <button type="button" data-solve-step="2">求值</button>
-      <button type="button" data-solve-step="3">驗證</button>
+      <button type="button" data-solve-step="problem" aria-current="step">題目</button>
+      <button type="button" data-solve-step="find" hidden>找項</button>
+      <button type="button" data-solve-step="setup">列式</button>
+      <button type="button" data-solve-step="solve">求值</button>
+      <button type="button" data-solve-step="verify">驗證</button>
     </nav>
     <div class="solve-board" id="solve-board">
       <p id="solve-condition" class="hint"></p>
       <p class="solve-demand">求 <var class="math">m</var>、<var class="math">n</var> 的值。</p>
       <div id="solve-expression" class="solve-expression" aria-label="多項式"></div>
-      <div id="solve-combination" class="solve-combination" hidden>
-        <p class="solve-combination-label">合併同類項後</p>
-        <div id="solve-combined-expression" class="solve-expression" aria-label="合併後的多項式"></div>
-      </div>
+      <p id="solve-setup-note" class="solve-setup-note" hidden>「不含」就是要讓框起的兩項消失。這兩項的係數必須為 0，乘上字母部分後，整項就等於 0。</p>
       <div id="solve-method" class="solve-method" hidden></div>
       <p id="solve-hint" class="solve-hint"></p>
       <p id="solve-announce" class="sr-only" role="status"></p>
@@ -390,16 +495,17 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     {
       condition: '化簡後不含二次項及一次項',
       intro: '先找含 x^2 的二次項和含 x 的一次項。',
+      findTerms: true,
       rule: '題目只要求二次項和一次項消失，三次項和常數項可以保留。',
       original: [['2x^3'], ['+ (m − 2)x^2', 'a'], ['+ (n + 3)x', 'b'], ['+ 5']],
       constraints: [
         {
-          label: '二次項的係數', reason: '含 x^2 的項只有一項，係數是 m − 2。要讓這項消失，係數必須為 0。',
+          label: '二次項的係數', reason: '框起的二次項是 (m − 2)x^2，係數是 m − 2。',
           equation: 'm − 2 = 0', value: 'm = 2',
           check: '2 − 2 = 0', checkReason: '二次項的係數是 0，二次項消失。'
         },
         {
-          label: '一次項的係數', reason: '含 x 的一次項只有一項，係數是 n + 3。要讓這項消失，係數也必須為 0。',
+          label: '一次項的係數', reason: '框起的一次項是 (n + 3)x，係數是 n + 3。',
           equation: 'n + 3 = 0', value: 'n = −3',
           check: '−3 + 3 = 0', checkReason: '一次項的係數是 0，一次項消失。'
         }
@@ -409,54 +515,46 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
       conclusion: '只剩三次項和常數項，符合題意。'
     },
     {
-      condition: '化簡後不含二次項及一次項',
-      intro: '這次有兩個二次項，也有兩個一次項。先把同類項分組。',
-      rule: '兩個係數可以各自不為 0。只要它們的和是 0，同類項合併後就會消失。',
-      original: [['(m − 1)x^2', 'a'], ['+ 3x^2', 'a'], ['+ (n − 4)x', 'b'], ['− 2x', 'b'], ['+ 7']],
-      combined: [['(m + 2)x^2', 'a'], ['+ (n − 6)x', 'b'], ['+ 7']],
+      condition: '化簡後是五次三項式（m 為非負整數）',
+      intro: '「五次」指最高次數是 5，「三項式」指化簡後有 3 項。',
+      rule: '用次數找出指數中的 m，再用項數找出係數中的 n。',
+      original: [['3x^2y^{m + 1}', 'a'], ['+ (n − 4)y^2', 'b'], ['− 2x'], ['+ 5']],
       constraints: [
         {
-          label: '二次項的係數', reason: '兩項都含 x^2。把係數 m − 1 和 3 相加，字母和指數照寫。',
-          combine: '(m − 1) + 3 = m + 2', equation: 'm + 2 = 0',
-          value: 'm = −2',
-          check: '(−2 − 1) + 3 = −3 + 3 = 0', checkReason: '二次項的兩個係數相加為 0。'
+          label: '由五次求 m', reason: '其餘項的次數最多是 2。要成為五次式，第一項的次數必須是 5，所以把 x 和 y 的指數相加。',
+          equation: '2 + (m + 1) = 5', value: 'm = 2',
+          check: '2 + 3 = 5', checkReason: '第一項的次數是 5。'
         },
         {
-          label: '一次項的係數', reason: '兩項都含 x。−2x 的係數是 −2，要連負號一起加。',
-          combine: '(n − 4) + (−2) = n − 6', equation: 'n − 6 = 0',
-          value: 'n = 6',
-          check: '(6 − 4) − 2 = 2 − 2 = 0', checkReason: '一次項的兩個係數也相加為 0。'
+          label: '由三項式求 n', reason: '第一項、−2x 和常數 5 都會留下，已經有三項。所以 (n − 4)y^2 必須消失。',
+          equation: 'n − 4 = 0', value: 'n = 4',
+          check: '4 − 4 = 0', checkReason: '第二項消失，剩下三項。'
         }
       ],
-      substitution: [['0 · x^2', 'a', true], ['+ 0 · x', 'b', true], ['+ 7']],
-      simplified: '7', verification: '用原式的係數驗算，看看兩組同類項怎樣抵消。',
-      conclusion: '合併後只剩常數 7，符合題意。'
+      substitution: [['3x^2y^3', 'a'], ['+ 0 · y^2', 'b', true], ['− 2x'], ['+ 5']],
+      simplified: '3x^2y^3 − 2x + 5', verification: '代回後，分別核對最高次數和項數。',
+      conclusion: '最高次數是 5，並且有三項，所以是五次三項式。'
     },
     {
-      condition: '化簡後是二次三項式（n 為非負整數）',
-      intro: '「二次」指最高次數是 2，「三項式」指合併同類項後有 3 項。',
-      rule: '先找出第三個保留下來的項，再檢查最高次數是否為 2。',
-      original: [['(m − 2)x^3', 'b'], ['+ 4x^2'], ['+ 5x'], ['+ x^n', 'a']],
+      condition: '化簡後不含字母 y（m 為非負整數）',
+      intro: '找出可能含 y 的兩項，再看每一項怎樣去掉 y。',
+      rule: '指數為 0，字母因式化成 1。係數為 0，整項消失。',
+      original: [['6x^2y^m', 'a'], ['+ (n − 4)y', 'b'], ['+ 5x'], ['+ 7']],
       constraints: [
         {
-          label: '從項數找出第三項', reason: '4x^2 和 5x 已有兩項。第三項要由 x^n 提供。',
-          cases: [
-            'n = 1 或 2，x^n 會和原有的項合併，項數不會增加。',
-            'n = 3，x^n 會和三次項合併。要符合二次，三次項必須消去，結果仍只有兩項。',
-            'n ≥ 4，x^n 無法與其他項合併，最高次數會超過 2。'
-          ],
-          equation: 'x^n 要成為常數項', deduction: '指數取 0 時，x^n 化成 1，成為第三項。',
-          value: 'n = 0', check: 'x^0 = 1', checkReason: '常數項 1 保留下來，項數是 3。'
+          label: '從第一項去掉 y', reason: '6x^2y^m 的係數固定是 6。當 m 大於 0 時，這項會含 y，所以要讓 y^m 化成 1。',
+          equation: 'y^m 要化成 1', deduction: 'y 的指數取 0，原來的 x^2 因式仍然保留。',
+          value: 'm = 0', check: '6x^2y^0 = 6x^2', checkReason: '第一項保留，但已不含 y。'
         },
         {
-          label: '按次數消去三次項', reason: 'x^n 成為常數後，只剩一個三次項。要讓最高次數是 2，三次項的係數必須為 0。',
-          equation: 'm − 2 = 0', value: 'm = 2',
-          check: '2 − 2 = 0', checkReason: '三次項消失，最高次數是 2。'
+          label: '消去第二項', reason: '(n − 4)y 中 y 的指數是固定的 1。把係數 n − 4 設為 0，這項便消失。',
+          equation: 'n − 4 = 0', value: 'n = 4',
+          check: '4 − 4 = 0', checkReason: '第二項的係數是 0，整項消失。'
         }
       ],
-      substitution: [['0 · x^3', 'b', true], ['+ 4x^2'], ['+ 5x'], ['+ x^0', 'a']],
-      simplified: '4x^2 + 5x + 1', verification: '代回後，分別核對最高次數和項數。',
-      conclusion: '二次項、一次項和常數項各有一項，所以是二次三項式。'
+      substitution: [['6x^2y^0', 'a'], ['+ 0 · y', 'b', true], ['+ 5x'], ['+ 7']],
+      simplified: '6x^2 + 5x + 7', verification: '代回後，檢查兩項怎樣去掉 y。',
+      conclusion: '化簡後只含 x，符合題意。'
     }
   ];
   const stages = [
@@ -491,8 +589,6 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   const solveStepButtons = [...document.querySelectorAll('[data-solve-step]')];
   const solveBoard = id('solve-board');
   const solveExpression = id('solve-expression');
-  const solveCombination = id('solve-combination');
-  const solveCombinedExpression = id('solve-combined-expression');
   const solveMethod = id('solve-method');
   const coefficientToggle = id('coefficient-toggle');
   const practicePanel = id('practice');
@@ -505,7 +601,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
 
   let selection = 0;
   let workedSelection = -1;
-  let workedStep = 0;
+  let workedStep = 'problem';
   let verifyTimer;
   let showingCoefficients = false;
   let isPractice = false;
@@ -599,11 +695,12 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   }
 
   function mathMarkup(text) {
-    return text.replace(/([a-z])(?:\^([a-z0-9]))?/g, (_, letter, exponent) => {
-      const variable = '<var>' + letter + '</var>';
+    const variableMarkup = letter => '<var>' + letter + '</var>';
+    return text.replace(/([a-z])(?:\^(?:\{([^}]+)\}|([a-z0-9])))?/g, (_, letter, group, single) => {
+      const variable = variableMarkup(letter);
+      const exponent = group ?? single;
       if (exponent === undefined) return variable;
-      const power = /[a-z]/.test(exponent) ? '<var>' + exponent + '</var>' : exponent;
-      return variable + '<sup>' + power + '</sup>';
+      return variable + '<sup>' + exponent.replace(/[a-z]/g, variableMarkup) + '</sup>';
     });
   }
 
@@ -627,7 +724,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     solvePanel.hidden = false;
     exampleButtons.forEach(button => button.setAttribute('aria-pressed', false));
     solveButtons.forEach((button, position) => button.setAttribute('aria-pressed', position === index));
-    renderWorked(0);
+    renderWorked('problem');
   }
 
   function workedTermsMarkup(terms) {
@@ -640,11 +737,10 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     const equation = '<span class="solve-equation">' + mathMarkup(item.equation) + '</span>';
     const value = '<strong class="solve-value">' + mathMarkup(item.value) + '</strong>';
     let details;
-    if (destination === 1) {
+    if (destination === 'setup') {
       details = '<p class="solve-reason">' + mathMarkup(item.reason) + '</p>' +
-        (item.cases ? '<ul class="solve-cases">' + item.cases.map(text => '<li>' + mathMarkup(text) + '</li>').join('') + '</ul>' : '') +
-        (item.combine ? '<span class="solve-combine">' + mathMarkup(item.combine) + '</span>' : '') + equation;
-    } else if (destination === 2) {
+        equation;
+    } else if (destination === 'solve') {
       details = equation + (item.deduction ? '<p class="solve-reason">' + mathMarkup(item.deduction) + '</p>' : '') + value;
     } else {
       details = value + '<span class="solve-check">' + mathMarkup(item.check) + '</span>' +
@@ -659,49 +755,63 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     cancelEffects();
     workedStep = destination;
     const example = workedExamples[workedSelection];
-    const solving = destination >= 1;
-    const hasValues = destination >= 2;
-    const verifying = destination === 3;
-    const showingCombination = destination === 1 && Boolean(example.combined);
-    const expression = verifying ? example.substitution : destination === 2 && example.combined ? example.combined : example.original;
-    const conditionFamilies = { 二次項: 'a', 一次項: 'b', 二次: 'b', 三項式: 'a' };
-    id('solve-condition').innerHTML = mathMarkup(example.condition).replace(/不含|二次項|一次項|二次|三項式/g, keyword => {
+    const finding = destination === 'find';
+    const settingUp = destination === 'setup';
+    const solving = destination === 'solve';
+    const verifying = destination === 'verify';
+    const showMethod = settingUp || solving || verifying;
+    const expression = verifying ? example.substitution : example.original;
+    const conditionFamilies = { 二次項: 'a', 一次項: 'b', 五次: 'a', 三項式: 'b' };
+    id('solve-condition').innerHTML = mathMarkup(example.condition).replace(/不含|二次項|一次項|五次|三項式/g, keyword => {
       const family = conditionFamilies[keyword];
       return '<strong class="solve-condition-keyword"' + (family ? ' data-family="' + family + '"' : '') +
         '>' + keyword + '</strong>';
     });
     const hint = id('solve-hint');
-    const hints = [example.intro, example.rule, '分開求 m 和 n，每個條件只含一個待求的數。', example.verification];
-    hint.innerHTML = mathMarkup(hints[destination]);
-    solveBoard.toggleAttribute('data-solve-active', solving);
+    const hints = {
+      problem: example.intro, setup: example.rule,
+      solve: '分開求 m 和 n，每個條件只含一個待求的數。', verify: example.verification
+    };
+    hint.hidden = finding;
+    hint.innerHTML = mathMarkup(hints[destination] ?? '');
+    solveBoard.toggleAttribute('data-solve-active', finding || showMethod);
+    solveBoard.toggleAttribute('data-finding', finding);
+    solvePanel.toggleAttribute('data-find-step', Boolean(example.findTerms));
     solveExpression.innerHTML = workedTermsMarkup(expression);
-    solveCombination.hidden = !showingCombination;
-    solveCombinedExpression.innerHTML = showingCombination ? workedTermsMarkup(example.combined) : '';
-    solveMethod.hidden = !solving;
-    solveMethod.innerHTML = solving ? example.constraints.map((item, index) =>
+    id('solve-setup-note').hidden = !settingUp || !example.findTerms;
+    solveMethod.hidden = !showMethod;
+    solveMethod.innerHTML = showMethod ? example.constraints.map((item, index) =>
       workedConstraintMarkup(item, index, destination)).join('') : '';
-    solveStepButtons.forEach((button, index) => {
-      if (index === destination) button.setAttribute('aria-current', 'step');
+    solveStepButtons.forEach(button => {
+      button.hidden = button.dataset.solveStep === 'find' && !example.findTerms;
+      if (button.dataset.solveStep === destination) button.setAttribute('aria-current', 'step');
       else button.removeAttribute('aria-current');
     });
-    id('solve-prev').disabled = destination === 0;
+    id('solve-prev').disabled = destination === 'problem';
     id('solve-next').disabled = verifying;
-    if (showingCombination) {
-      animate(solveCombination, [{ opacity: 0, transform: 'translateY(-5px)' }, { opacity: 1, transform: 'none' }],
-        { duration: 300, fill: 'backwards' });
+    if (finding) {
+      solveExpression.querySelectorAll('[data-family]').forEach((term, index) =>
+        animate(term, [{ borderColor: 'transparent' }, { borderColor: getComputedStyle(term).borderTopColor }],
+          { duration: 300, delay: index * 215, fill: 'backwards' }));
     }
-    if (destination === 1) {
+    if (settingUp) {
       [...solveMethod.children].forEach((card, index) => animate(card,
         [{ opacity: 0, transform: 'translateY(-5px)' }, { opacity: 1, transform: 'none' }],
         { duration: 260, delay: index * 160, fill: 'backwards' }));
     }
-    if (destination === 2) {
+    if (solving) {
       solveMethod.querySelectorAll('.solve-value').forEach((value, index) => animate(value,
         [{ opacity: 0 }, { opacity: 1 }], { duration: 260, delay: index * 180, fill: 'backwards' }));
     }
-    const revealed = solving ? example.constraints.map(item => hasValues ? item.value : item.equation) : [];
-    id('solve-announce').textContent = revealed.join('。');
+    const revealed = showMethod ? example.constraints.map(item => settingUp ? item.equation : item.value) : [];
+    id('solve-announce').textContent = finding ? '已框起二次項和一次項。' : revealed.join('。');
     if (verifying) verifyWorked(example);
+  }
+
+  function moveWorked(offset) {
+    const available = solveStepButtons.filter(button => !button.hidden).map(button => button.dataset.solveStep);
+    const destination = available[available.indexOf(workedStep) + offset];
+    if (destination) renderWorked(destination);
   }
 
   function verifyWorked(example) {
@@ -1078,10 +1188,10 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     if (index !== selection || workedSelection !== -1) loadExample(index);
   }));
   solveButtons.forEach(button => button.addEventListener('click', () => loadWorked(Number(button.dataset.solve))));
-  solveStepButtons.forEach(button => button.addEventListener('click', () => renderWorked(Number(button.dataset.solveStep))));
-  id('solve-reset').addEventListener('click', () => renderWorked(0));
-  id('solve-prev').addEventListener('click', () => renderWorked(workedStep - 1));
-  id('solve-next').addEventListener('click', () => renderWorked(workedStep + 1));
+  solveStepButtons.forEach(button => button.addEventListener('click', () => renderWorked(button.dataset.solveStep)));
+  id('solve-reset').addEventListener('click', () => renderWorked('problem'));
+  id('solve-prev').addEventListener('click', () => moveWorked(-1));
+  id('solve-next').addEventListener('click', () => moveWorked(1));
   coefficientToggle.addEventListener('click', () => {
     showingCoefficients = !showingCoefficients;
     showCoefficientIntro();
