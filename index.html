@@ -263,7 +263,14 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
 }
 :not([data-show-degrees]).board .degree { display: none; }
 [data-show-degrees] .degree { visibility: visible; }
-[data-practice][data-step="2"] .term-group:not(.answered) .degree { visibility: hidden; }
+[data-step="2"] .term-group:not(.answered) .degree { visibility: hidden; }
+[data-show-degrees][data-has-constant] .track { padding-bottom: 27px; }
+.constant-explanation {
+  position: absolute; inset: 100% 0 auto auto; width: max-content;
+  margin-top: 5px; padding: 2px 6px; border-radius: 4px;
+  background: var(--fill); color: var(--accent); font-size: .8125rem;
+}
+.term-group:first-child .constant-explanation { inset-inline: 0 auto; }
 .term-group.question .tile { outline: 2px solid var(--blue); outline-offset: 2px; }
 .pointer {
   position: absolute; z-index: 2; inset: -23px auto auto 50%; margin-left: -10px;
@@ -311,7 +318,9 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
 .controls button { display: grid; place-items: center; width: 48px; padding: 0; }
 #play { width: 60px; border-color: var(--ink); background: var(--ink); color: white; }
 #play:hover { background: var(--blue); }
-.panel:has([data-building], [data-await-count]) #next:not(:disabled) { border-color: var(--blue); background: #eaf2ff; color: var(--blue); }
+.panel:has([data-building], [data-await-count], [data-await-degree]) #next:not(:disabled) { border-color: var(--blue); background: #eaf2ff; color: var(--blue); }
+.controls button[aria-disabled="true"] { opacity: .55; cursor: default; }
+.degree-step-hint { flex: 0 0 100%; text-align: center; color: var(--muted); font-size: .875rem; }
 .icon { width: 22px; height: 22px; position: relative; }
 .icon::before, .icon::after { content: ""; position: absolute; }
 .icon--play::before, .icon--step::before {
@@ -453,6 +462,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
       <p id="classification" class="classification" hidden><span class="classification-degree"><span></span>次</span><span class="classification-count"><span></span>項式</span></p>
     </div>
     <div class="controls" role="group" aria-label="播放控制">
+      <p id="degree-step-hint" class="degree-step-hint" hidden>每按一次下一步，顯示一項次數。</p>
       <button type="button" id="reset" aria-label="重設" title="重設"><span class="icon icon--reset" aria-hidden="true"></span></button>
       <button type="button" id="prev" aria-label="上一步" title="上一步" disabled><span class="icon icon--step icon--previous" aria-hidden="true"></span></button>
       <button type="button" id="play" aria-label="自動播放" title="自動播放"><span class="icon icon--play" aria-hidden="true"></span></button>
@@ -491,7 +501,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
 
   const examples = [
     [[3, { x: 2 }], [-2, { x: 1, y: 3 }], [1, { y: 1 }], [-7, {}]],
-    [[-4, {}], [6, { a: 1, b: 1 }], [-1, { a: 2, b: 1 }], [-3, { b: 4 }], [2, { a: 3, b: 2 }]]
+    [[-4, {}], [6, { a: 1, b: 1 }], [-1, { a: 2, b: 1 }], [-3, { b: 4 }], [2, { a: 3, b: 3 }]]
   ];
   const exercises = [
     [[2, { x: 4, y: 1 }], [-3, { x: 2 }], [7, { y: 1 }], [1, {}]],
@@ -581,7 +591,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   const polynomialRule = '單項式的和是多項式';
   const chinese = { 4: '四', 5: '五', 6: '六' };
   const motionScale = 1.3;
-  const durations = [1500 * motionScale, 2350 * motionScale, 8200];
+  const durations = [1500 * motionScale, 2350 * motionScale];
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const id = name => document.getElementById(name);
   const demoPanel = id('demo-panel');
@@ -598,6 +608,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   const playIcon = play.firstElementChild;
   const back = id('prev');
   const next = id('next');
+  const degreeStepHint = id('degree-step-hint');
   const stepButtons = [...document.querySelectorAll('[data-go]')];
   const exampleButtons = [...document.querySelectorAll('[data-example]')];
   const solveButtons = [...document.querySelectorAll('[data-solve]')];
@@ -628,6 +639,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   let timer;
   let assemblyTimer;
   let countTimer;
+  let degreeAnimation;
   let running = false;
   let effects = [];
 
@@ -643,7 +655,6 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     counted = false;
     answered = 0;
     board.toggleAttribute('data-practice', isPractice);
-    play.hidden = isPractice;
     exampleButtons.forEach((button, position) => button.setAttribute('aria-pressed', position === index));
     solveButtons.forEach(button => button.setAttribute('aria-pressed', false));
     const source = isPractice ? exercises[index - examples.length] : examples[index];
@@ -654,6 +665,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     });
     const lettersUsed = [...new Set(terms.flatMap(term => term.variables.map(([letter]) => letter)))].sort();
     showPolynomialVariables(polynomialVariables, lettersUsed);
+    board.toggleAttribute('data-has-constant', terms.some(term => term.variables.length === 0));
     list.toggleAttribute('data-dense', terms.length > 4);
     list.innerHTML = terms.map(({ coefficient, variables, degree }, index) => {
       const magnitude = Math.abs(coefficient);
@@ -669,6 +681,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
       const detail = variables.length
         ? '<span class="degree-detail math">' + sum + '<span class="degree-operator">=</span></span>'
         : '<span class="degree-detail">常數項</span>';
+      const explanation = variables.length ? '' : '<span class="constant-explanation">沒有字母，所以次數是 0。</span>';
       const needsBrackets = index > 0 && coefficient < 0;
       const plus = index > 0 ? '<span class="joiner' + (needsBrackets ? ' signed-joiner' : '') + '">+</span>' : '';
       const coefficientPart = selection === 0
@@ -689,7 +702,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
         '<div class="tile"><span>' + expression + '</span></div>' +
         kindLabel +
         '<div class="degree">' + detail + '<strong class="degree-number math">' +
-        degree + '</strong></div></div>';
+        degree + '</strong>' + explanation + '</div></div>';
     }).join('');
     render(isPractice ? 1 : 0, true);
   }
@@ -706,6 +719,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   }
 
   function cancelEffects() {
+    degreeAnimation = undefined;
     effects.forEach(effect => effect.cancel());
     effects = [];
   }
@@ -866,33 +880,63 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
       { duration, delay, fill: 'backwards' });
   }
 
-  function playDegreeDemo(groups, delay) {
+  function playDegreeDemo(group) {
+    const delay = 150;
     const exponentInterval = 640;
     const appear = (target, delay) => animate(target, [{ opacity: 0 }, { opacity: 1 }],
       { duration: 190, delay, fill: 'backwards', durationScale: 1 });
-    groups.forEach(group => {
-      appear(group.querySelector('.degree'), delay);
-      const powers = [...group.querySelectorAll('.tile sup')];
-      const addends = [...group.querySelectorAll('.degree-addend')];
-      const operators = [...group.querySelectorAll('.degree-operator')];
-      powers.forEach((power, index) => {
-        const start = power.getBoundingClientRect();
-        const addend = addends[index];
-        const end = addend.getBoundingClientRect();
-        const x = start.x + start.width / 2 - end.x - end.width / 2;
-        const y = start.y + start.height / 2 - end.y - end.height / 2;
-        const movement = 'translate(' + x + 'px,' + y + 'px) scale(.8)';
-        const flightDelay = delay + 180 + index * exponentInterval;
-        animate(power, [{ backgroundColor: 'transparent' }, { backgroundColor: '#fae49b', offset: .22 },
-          { backgroundColor: 'transparent' }], { duration: 680, delay: flightDelay - 120, durationScale: 1 });
-        animate(addend, [{ opacity: 0, transform: movement }, { opacity: 1, offset: .24 },
-          { opacity: 1, transform: 'none' }], { duration: 550, delay: flightDelay, easing: 'ease-in-out', fill: 'backwards', durationScale: 1 });
-        appear(operators[index], flightDelay + 545);
-      });
-      const answerDelay = delay + (powers.length ? 320 + powers.length * exponentInterval : 400);
-      appear(group.querySelector('.degree-number'), answerDelay);
-      delay = answerDelay + 210;
+    appear(group.querySelector('.degree'), delay);
+    const powers = [...group.querySelectorAll('.tile sup')];
+    const addends = [...group.querySelectorAll('.degree-addend')];
+    const operators = [...group.querySelectorAll('.degree-operator')];
+    powers.forEach((power, index) => {
+      const start = power.getBoundingClientRect();
+      const addend = addends[index];
+      const end = addend.getBoundingClientRect();
+      const x = start.x + start.width / 2 - end.x - end.width / 2;
+      const y = start.y + start.height / 2 - end.y - end.height / 2;
+      const movement = 'translate(' + x + 'px,' + y + 'px) scale(.8)';
+      const flightDelay = delay + 180 + index * exponentInterval;
+      animate(power, [{ backgroundColor: 'transparent' }, { backgroundColor: '#fae49b', offset: .22 },
+        { backgroundColor: 'transparent' }], { duration: 680, delay: flightDelay - 120, durationScale: 1 });
+      animate(addend, [{ opacity: 0, transform: movement }, { opacity: 1, offset: .24 },
+        { opacity: 1, transform: 'none' }], { duration: 550, delay: flightDelay, easing: 'ease-in-out', fill: 'backwards', durationScale: 1 });
+      appear(operators[index], flightDelay + 545);
     });
+    const answerDelay = delay + (powers.length ? 320 + powers.length * exponentInterval : 400);
+    const explanation = group.querySelector('.constant-explanation');
+    if (explanation) appear(explanation, answerDelay);
+    return appear(group.querySelector('.degree-number'), answerDelay);
+  }
+
+  function continueDegreeDemo() {
+    if (isPractice || step !== 2) return false;
+    if (degreeAnimation) return true;
+    if (answered === terms.length) return false;
+
+    const groups = [...list.children];
+    const current = groups[answered];
+    current.classList.add('answered');
+    answered += 1;
+    const finish = () => {
+      const pointerBefore = pointer.getBoundingClientRect();
+      degreeAnimation = undefined;
+      updateDegreePointer(groups, pointerBefore);
+      updateControls();
+      id('announce').textContent = '第 ' + answered + ' 項的次數是 ' + terms[answered - 1].degree +
+        (answered < terms.length ? '。按下一步顯示下一項的次數。' : '。各項次數已顯示。');
+    };
+    const animation = playDegreeDemo(current);
+    if (animation) {
+      degreeAnimation = animation;
+      updateControls();
+      animation.finished.then(() => {
+        if (degreeAnimation === animation) finish();
+      }, () => {});
+    } else {
+      finish();
+    }
+    return true;
   }
 
   function playClassification(delay) {
@@ -975,7 +1019,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
       id('stage-hint').textContent = '有多少項？';
       id('announce').textContent = '有多少個單項式？';
     }
-    updatePractice([...list.children]);
+    updatePractice();
     updateControls();
   }
 
@@ -1028,11 +1072,11 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     const pointerBefore = pointer.isConnected ? pointer.getBoundingClientRect() : null;
     cancelEffects();
     step = destination;
+    if (!isPractice && step < 2) answered = 0;
     const showCount = step >= 1;
     const building = step === 1;
     const showDegree = step === 3;
     const finished = answered === terms.length;
-    const practicing = isPractice && step === 2;
     const maxDegree = Math.max(...terms.map(term => term.degree));
     board.dataset.step = step;
     board.toggleAttribute('data-building', building);
@@ -1053,10 +1097,10 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     groups.forEach((group, index) => {
       group.querySelector('.term-index').hidden = true;
       group.classList.toggle('highest', showDegree && terms[index].degree === maxDegree);
-      group.classList.toggle('answered', isPractice && index < answered);
-      group.classList.toggle('question', practicing && !finished && index === answered);
+      group.classList.toggle('answered', index < answered);
     });
-    updatePractice(groups, pointerBefore);
+    updateDegreePointer(groups, pointerBefore);
+    updatePractice();
 
     displayCount(showCount && !building);
     degree.textContent = showDegree ? maxDegree : '—';
@@ -1069,8 +1113,8 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     id('announce').textContent = [
       stages[step][0],
       building ? '把帶有正負號的單項式相加' : showCount ? '有 ' + terms.length + ' 個單項式' : '',
-      step >= 2 && (!isPractice || finished) ? '各項次數為 ' + terms.map(term => term.degree).join('、') : '',
-      practicing && !finished ? '第 ' + (answered + 1) + ' 項的次數' : '',
+      (showDegree || (step === 2 && finished)) ? '各項次數為 ' + terms.map(term => term.degree).join('、') : '',
+      step === 2 && !finished ? '第 ' + (answered + 1) + ' 項的次數' : '',
       showDegree ? '最高次數是 ' + maxDegree + '，' + classification.textContent : ''
     ].filter(Boolean).join('。');
 
@@ -1079,7 +1123,6 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
       else button.removeAttribute('aria-current');
     });
     updateControls();
-    if (!isPractice && step === 2 && previous !== 2) playDegreeDemo(groups, previous === 0 ? 970 : 150);
 
     tiles.forEach((tile, index) => {
       if (introduce) {
@@ -1114,7 +1157,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     }
   }
 
-  function updatePractice(groups, pointerBefore) {
+  function updatePractice() {
     const askingCount = isPractice && board.hasAttribute('data-await-count');
     const askingDegrees = isPractice && step === 2;
     const finished = answered === terms.length;
@@ -1125,12 +1168,17 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     const label = askingCount ? '顯示項數' : '顯示第 ' + (answered + 1) + ' 項的次數';
     reveal.setAttribute('aria-label', label);
     reveal.title = label;
-    if (!askingDegrees || finished) {
+    practiceProgress.textContent = answered + ' / ' + terms.length;
+  }
+
+  function updateDegreePointer(groups, pointerBefore) {
+    const current = step === 2 ? groups[answered] : undefined;
+    groups.forEach(group => group.classList.toggle('question', group === current));
+    if (!current) {
       pointer.remove();
       return;
     }
-    groups[answered].prepend(pointer);
-    practiceProgress.textContent = answered + ' / ' + terms.length;
+    current.prepend(pointer);
     if (pointerBefore) {
       const after = pointer.getBoundingClientRect();
       const shift = pointerBefore.x - after.x;
@@ -1143,19 +1191,29 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     const waitingToCount = board.hasAttribute('data-await-count');
     const waiting = adding || waitingToCount;
     const finished = answered === terms.length;
+    const demoDegrees = !isPractice && step === 2;
+    const waitingForDegree = demoDegrees && !finished && !degreeAnimation;
+    play.hidden = isPractice || demoDegrees;
+    degreeStepHint.hidden = !demoDegrees;
+    degreeStepHint.textContent = finished && !degreeAnimation
+      ? '按下一步找最高次數。' : '每按一次下一步，顯示一項次數。';
+    board.toggleAttribute('data-await-degree', waitingForDegree);
     const icon = running ? 'pause' : step === 3 ? 'replay' : 'play';
     const label = running ? '暫停' : step === 3 ? '重播' : waiting ? '繼續播放' : '自動播放';
     playIcon.className = 'icon icon--' + icon;
     play.setAttribute('aria-label', label);
     play.title = label;
-    const nextLabel = adding ? '去括號' : waitingToCount ? '數項' : '下一步';
+    const nextLabel = adding ? '去括號' : waitingToCount ? '數項' :
+      degreeAnimation ? '正在顯示次數' : waitingForDegree ? '顯示這一項的次數' : '下一步';
     next.setAttribute('aria-label', nextLabel);
+    next.setAttribute('aria-disabled', Boolean(degreeAnimation));
     next.title = nextLabel;
     back.disabled = step === 0;
     next.disabled = step === stages.length - 1 ||
       (isPractice && ((step === 1 && !adding && !counted) || (step === 2 && !finished)));
     stepButtons[2].disabled = isPractice && !counted;
-    stepButtons[3].disabled = isPractice && (!counted || !finished);
+    stepButtons[3].disabled = (isPractice && (!counted || !finished)) ||
+      (demoDegrees && (!finished || Boolean(degreeAnimation)));
   }
 
   function stop() {
@@ -1172,7 +1230,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   function schedule() {
     timer = setTimeout(() => {
       render(step + 1);
-      if (board.hasAttribute('data-building') || step === stages.length - 1) stop();
+      if (board.hasAttribute('data-building') || step === 2) stop();
       else schedule();
     }, durations[step]);
   }
@@ -1184,6 +1242,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   }
 
   play.addEventListener('click', () => {
+    if (step === 2) return;
     if (running) {
       stop();
       return;
@@ -1204,7 +1263,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   });
   back.addEventListener('click', () => go(step - 1));
   next.addEventListener('click', () => {
-    if (board.hasAttribute('data-settling') || continueAssembly() || continueCount()) return;
+    if (board.hasAttribute('data-settling') || continueAssembly() || continueCount() || continueDegreeDemo()) return;
     go(step + 1);
   });
   stepButtons.forEach(button => button.addEventListener('click', () => go(Number(button.dataset.go))));
@@ -1230,7 +1289,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
       board.removeAttribute('data-await-count');
       showPolynomialRule();
       showCountAnswer();
-      updatePractice([...list.children]);
+      updatePractice();
       updateControls();
       next.focus();
       return;
