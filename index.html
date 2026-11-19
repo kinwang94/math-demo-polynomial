@@ -71,6 +71,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
 }
 .hint { min-height: 1.5em; text-align: center; text-wrap: balance; color: var(--muted); font-size: 1rem; font-weight: 700; }
 .rule-emphasis { display: inline-block; margin-inline-start: .2em; padding: .1em .3em; border-radius: .25em; background: #e3edff; color: #164584; font-weight: 800; line-height: 1.25; }
+.degree-emphasis { margin-inline: .08em; padding-inline: .2em; font-size: 1.13em; }
 .track { display: grid; grid-template-columns: minmax(0, 1fr); place-items: start center; position: relative; min-height: 206px; padding-top: 33px; }
 .track::before {
   content: "";
@@ -227,13 +228,18 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
 .solve-board [data-family="a"] { --family-text: #204e92; --family-fill: #eaf2ff; --family-edge: #c0d5f6; }
 .solve-board [data-family="b"] { --family-text: #604593; --family-fill: #f1ecfc; --family-edge: #dacef1; }
 .solve-board[data-solve-active] .solve-term[data-family] { color: var(--family-text); background: var(--family-fill); border-color: var(--family-edge); }
-.solve-method { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; max-width: 570px; margin-inline: auto; }
-.solve-constraint { display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 98px; padding: 10px 5px; border-radius: 7px; background: var(--family-fill); border: 1px solid var(--family-edge); color: var(--family-text); }
-.solve-constraint-label { font-size: .875rem; font-weight: 700; }
+.solve-combination { max-width: 740px; margin: 0 auto 14px; border-top: 1px solid var(--line); padding-top: 9px; }
+.solve-combination-label { color: var(--muted); font-size: .875rem; font-weight: 700; }
+.solve-combination .solve-expression { min-height: 0; margin: 5px 0 0; }
+.solve-method { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: 740px; margin-inline: auto; }
+.solve-constraint { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 13px 15px; border-radius: 7px; background: var(--family-fill); border: 1px solid var(--family-edge); color: var(--family-text); text-align: left; }
+.solve-constraint-label { font-size: .9375rem; font-weight: 700; }
+.solve-reason { color: var(--ink); font-size: .9375rem; line-height: 1.6; }
+.solve-reason var, .solve-hint var { font-family: var(--math); }
 .solve-equation, .solve-value { font: clamp(1.125rem, 2.8vw, 1.65rem)/1.24 var(--math); }
-.solve-combine { font: clamp(.875rem, 2.1vw, 1.25rem)/1.25 var(--math); white-space: nowrap; }
+.solve-combine, .solve-working, .solve-check { font: clamp(1rem, 2.1vw, 1.25rem)/1.3 var(--math); }
 .solve-value { font-weight: 700; }
-.solve-hint { min-height: 1.5em; margin: 12px 0 0; color: var(--muted); font-size: .9rem; }
+.solve-hint { min-height: 1.5em; max-width: 740px; margin: 12px auto 0; color: var(--muted); font-size: .9375rem; text-wrap: pretty; }
 .solve-hint .math { font-size: 1.15em; }
 #solve-next:not(:disabled) { border-color: var(--blue); background: var(--blue); color: white; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
@@ -253,6 +259,8 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   .solve-method { gap: 5px; }
 }
 @media (max-width: 480px) {
+  .solve-method { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .solve-constraint { padding: 10px 12px; }
   .term-list[data-dense] { --plus-gap: 11px; }
   [data-step="0"] .term-list[data-dense] { gap: 5px; }
   .term-list[data-dense] .tile, [data-step="0"] .term-list[data-dense] .tile { min-width: clamp(36px, 11vw, 52px); padding-inline: 3px; font-size: clamp(1rem, 4.55vw, 1.35rem); }
@@ -336,6 +344,10 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
       <p id="solve-condition" class="hint"></p>
       <p class="solve-demand">求 <var class="math">m</var>、<var class="math">n</var> 的值。</p>
       <div id="solve-expression" class="solve-expression" aria-label="多項式"></div>
+      <div id="solve-combination" class="solve-combination" hidden>
+        <p class="solve-combination-label">合併同類項後</p>
+        <div id="solve-combined-expression" class="solve-expression" aria-label="合併後的多項式"></div>
+      </div>
       <div id="solve-method" class="solve-method" hidden></div>
       <p id="solve-hint" class="solve-hint"></p>
       <p id="solve-announce" class="sr-only" role="status"></p>
@@ -367,35 +379,70 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   const workedExamples = [
     {
       condition: '化簡後不含二次項及一次項',
+      intro: '先找含 x^2 的二次項和含 x 的一次項。',
+      rule: '題目只要求二次項和一次項消失，三次項和常數項可以保留。',
       original: [['2x^3'], ['+ (m − 2)x^2', 'a'], ['+ (n + 3)x', 'b'], ['+ 5']],
       constraints: [
-        { label: '二次項的係數', equation: 'm − 2 = 0', value: 'm = 2' },
-        { label: '一次項的係數', equation: 'n + 3 = 0', value: 'n = −3' }
+        {
+          label: '二次項的係數', reason: '含 x^2 的項只有一項，係數是 m − 2。要讓這項消失，係數必須為 0。',
+          equation: 'm − 2 = 0', operation: '等式兩邊同加 2。', working: 'm − 2 + 2 = 0 + 2', value: 'm = 2',
+          check: '2 − 2 = 0', checkReason: '二次項的係數是 0，二次項消失。'
+        },
+        {
+          label: '一次項的係數', reason: '含 x 的一次項只有一項，係數是 n + 3。要讓這項消失，係數也必須為 0。',
+          equation: 'n + 3 = 0', operation: '等式兩邊同減 3。', working: 'n + 3 − 3 = 0 − 3', value: 'n = −3',
+          check: '−3 + 3 = 0', checkReason: '一次項的係數是 0，一次項消失。'
+        }
       ],
       substitution: [['2x^3'], ['+ 0 · x^2', 'a', true], ['+ 0 · x', 'b', true], ['+ 5']],
-      simplified: '2x^3 + 5'
+      simplified: '2x^3 + 5', verification: '把 m 和 n 代回原式，檢查這兩項是否消失。',
+      conclusion: '只剩三次項和常數項，符合題意。'
     },
     {
       condition: '化簡後不含二次項及一次項',
+      intro: '這次有兩個二次項，也有兩個一次項。先把同類項分組。',
+      rule: '兩個係數可以各自不為 0。只要它們的和是 0，同類項合併後就會消失。',
       original: [['(m − 1)x^2', 'a'], ['+ 3x^2', 'a'], ['+ (n − 4)x', 'b'], ['− 2x', 'b'], ['+ 7']],
       combined: [['(m + 2)x^2', 'a'], ['+ (n − 6)x', 'b'], ['+ 7']],
       constraints: [
-        { label: '二次項的係數', combine: '(m − 1) + 3 = m + 2', equation: 'm + 2 = 0', value: 'm = −2' },
-        { label: '一次項的係數', combine: '(n − 4) − 2 = n − 6', equation: 'n − 6 = 0', value: 'n = 6' }
+        {
+          label: '二次項的係數', reason: '兩項都含 x^2。把係數 m − 1 和 3 相加，字母和指數照寫。',
+          combine: '(m − 1) + 3 = m + 2', equation: 'm + 2 = 0',
+          operation: '等式兩邊同減 2。', working: 'm + 2 − 2 = 0 − 2', value: 'm = −2',
+          check: '(−2 − 1) + 3 = −3 + 3 = 0', checkReason: '二次項的兩個係數相加為 0。'
+        },
+        {
+          label: '一次項的係數', reason: '兩項都含 x。−2x 的係數是 −2，要連負號一起加。',
+          combine: '(n − 4) + (−2) = n − 6', equation: 'n − 6 = 0',
+          operation: '等式兩邊同加 6。', working: 'n − 6 + 6 = 0 + 6', value: 'n = 6',
+          check: '(6 − 4) − 2 = 2 − 2 = 0', checkReason: '一次項的兩個係數也相加為 0。'
+        }
       ],
       substitution: [['0 · x^2', 'a', true], ['+ 0 · x', 'b', true], ['+ 7']],
-      simplified: '7'
+      simplified: '7', verification: '用原式的係數驗算，看看兩組同類項怎樣抵消。',
+      conclusion: '合併後只剩常數 7，符合題意。'
     },
     {
       condition: '化簡後是常數（m 為非負整數）',
+      intro: '如果是常數，改變 x 或 y，式子的值都不會變。',
+      rule: '含 x 和含 y 的項無法互相抵消，要分開處理。',
       original: [['4x^m', 'a'], ['+ (n − 1)y', 'b'], ['+ 7']],
       constraints: [
-        { label: 'x 的指數', equation: 'x^m = 1', value: 'm = 0' },
-        { label: 'y 項的係數', equation: 'n − 1 = 0', value: 'n = 1' }
+        {
+          label: 'x 的指數', reason: '4x^m 的係數固定是 4。指數大於 0 時，這一項會隨 x 改變。',
+          equation: 'x^m 要化為常數', operation: 'm 只能是 0 或正整數。把正整數排除後，只剩 0。',
+          working: 'x^0 = 1', value: 'm = 0',
+          check: '4x^0 = 4 × 1 = 4', checkReason: '指數為 0，這一項化成常數 4。'
+        },
+        {
+          label: 'y 項的係數', reason: '只有這一項含 y。要讓式子的值與 y 無關，這一項的係數必須為 0。',
+          equation: 'n − 1 = 0', operation: '等式兩邊同加 1。', working: 'n − 1 + 1 = 0 + 1', value: 'n = 1',
+          check: '1 − 1 = 0', checkReason: '係數為 0，整個 y 項消失。'
+        }
       ],
       substitution: [['4x^0', 'a'], ['+ 0 · y', 'b', true], ['+ 7']],
-      simplified: '4 + 7 = 11',
-      exponentExample: true
+      simplified: '4 + 7 = 11', verification: '代回後，看看哪一項化成常數，哪一項消失。',
+      conclusion: '只剩常數 4 和 7，相加得 11，符合題意。'
     }
   ];
   const stages = [
@@ -406,7 +453,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   ];
   const polynomialRule = '單項式的和是多項式';
   const chinese = { 4: '四', 5: '五', 6: '六' };
-  const durations = [1500, 2350, 5900];
+  const durations = [1500, 2350, 8200];
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const id = name => document.getElementById(name);
   const demoPanel = id('demo-panel');
@@ -429,6 +476,8 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   const solveStepButtons = [...document.querySelectorAll('[data-solve-step]')];
   const solveBoard = id('solve-board');
   const solveExpression = id('solve-expression');
+  const solveCombination = id('solve-combination');
+  const solveCombinedExpression = id('solve-combined-expression');
   const solveMethod = id('solve-method');
   const coefficientToggle = id('coefficient-toggle');
   const practicePanel = id('practice');
@@ -559,6 +608,30 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     renderWorked(0);
   }
 
+  function workedTermsMarkup(terms) {
+    return terms.map(([term, family, remove]) =>
+      '<span class="solve-term"' + (family ? ' data-family="' + family + '"' : '') +
+      (remove ? ' data-zero' : '') + '>' + mathMarkup(term) + '</span>').join('');
+  }
+
+  function workedConstraintMarkup(item, index, destination) {
+    const equation = '<span class="solve-equation">' + mathMarkup(item.equation) + '</span>';
+    const value = '<strong class="solve-value">' + mathMarkup(item.value) + '</strong>';
+    let details;
+    if (destination === 1) {
+      details = '<p class="solve-reason">' + mathMarkup(item.reason) + '</p>' +
+        (item.combine ? '<span class="solve-combine">' + mathMarkup(item.combine) + '</span>' : '') + equation;
+    } else if (destination === 2) {
+      details = equation + '<p class="solve-reason">' + mathMarkup(item.operation) + '</p>' +
+        '<span class="solve-working">' + mathMarkup(item.working) + '</span>' + value;
+    } else {
+      details = value + '<span class="solve-check">' + mathMarkup(item.check) + '</span>' +
+        '<p class="solve-reason">' + mathMarkup(item.checkReason) + '</p>';
+    }
+    return '<div class="solve-constraint" data-family="' + (index === 0 ? 'a' : 'b') + '">' +
+      '<span class="solve-constraint-label">' + mathMarkup(item.label) + '</span>' + details + '</div>';
+  }
+
   function renderWorked(destination) {
     clearTimeout(verifyTimer);
     cancelEffects();
@@ -567,31 +640,30 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     const solving = destination >= 1;
     const hasValues = destination >= 2;
     const verifying = destination === 3;
-    const expression = verifying ? example.substitution : solving && example.combined ? example.combined : example.original;
+    const showingCombination = destination === 1 && Boolean(example.combined);
+    const expression = verifying ? example.substitution : destination === 2 && example.combined ? example.combined : example.original;
     id('solve-condition').innerHTML = mathMarkup(example.condition);
     const hint = id('solve-hint');
-    hint.replaceChildren();
+    const hints = [example.intro, example.rule, '分開求 m 和 n，每個條件只含一個待求的數。', example.verification];
+    hint.innerHTML = mathMarkup(hints[destination]);
     solveBoard.toggleAttribute('data-solve-active', solving);
-    solveExpression.innerHTML = expression.map(([term, family, remove]) =>
-      '<span class="solve-term"' + (family ? ' data-family="' + family + '"' : '') +
-      (remove ? ' data-zero' : '') + '>' + mathMarkup(term) + '</span>').join('');
+    solveExpression.innerHTML = workedTermsMarkup(expression);
+    solveCombination.hidden = !showingCombination;
+    solveCombinedExpression.innerHTML = showingCombination ? workedTermsMarkup(example.combined) : '';
     solveMethod.hidden = !solving;
-    solveMethod.innerHTML = solving ? example.constraints.map(({ label, combine, equation, value }, index) =>
-      '<div class="solve-constraint" data-family="' + (index === 0 ? 'a' : 'b') + '">' +
-      '<span class="solve-constraint-label">' + mathMarkup(label) + '</span>' +
-      (combine ? '<span class="solve-combine">' + mathMarkup(combine) + '</span>' : '') +
-      '<span class="solve-equation">' + mathMarkup(equation) + '</span>' +
-      (hasValues ? '<strong class="solve-value">' + mathMarkup(value) + '</strong>' : '') +
-      '</div>').join('') : '';
+    solveMethod.innerHTML = solving ? example.constraints.map((item, index) =>
+      workedConstraintMarkup(item, index, destination)).join('') : '';
     solveStepButtons.forEach((button, index) => {
       if (index === destination) button.setAttribute('aria-current', 'step');
       else button.removeAttribute('aria-current');
     });
     id('solve-prev').disabled = destination === 0;
     id('solve-next').disabled = verifying;
+    if (showingCombination) {
+      animate(solveCombination, [{ opacity: 0, transform: 'translateY(-5px)' }, { opacity: 1, transform: 'none' }],
+        { duration: 300, fill: 'backwards' });
+    }
     if (destination === 1) {
-      hint.textContent = example.combined ? '先合併同類項，再把指定項的係數設為 0。'
-        : example.exponentExample ? '含字母的部分化為常數或消失。' : '不含某次項，該次項的係數就是 0。';
       [...solveMethod.children].forEach((card, index) => animate(card,
         [{ opacity: 0, transform: 'translateY(-5px)' }, { opacity: 1, transform: 'none' }],
         { duration: 260, delay: index * 160, fill: 'backwards' }));
@@ -606,11 +678,9 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   }
 
   function verifyWorked(example) {
-    id('solve-hint').innerHTML = example.exponentExample
-      ? '<span class="math">' + mathMarkup('x^0') + '</span> 化為 1，係數為 0 的項消失。'
-      : '係數為 0，該項消失。';
     const result = '<span class="solve-term">' + mathMarkup(example.simplified) + '</span>';
     const announceResult = () => {
+      id('solve-hint').innerHTML = mathMarkup(example.conclusion);
       id('solve-announce').textContent = '化簡結果是 ' + example.simplified;
     };
     if (reducedMotion.matches) {
@@ -638,7 +708,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   }
 
   function playDegreeDemo(groups, delay) {
-    const exponentInterval = 385;
+    const exponentInterval = 640;
     const appear = (target, delay) => animate(target, [{ opacity: 0 }, { opacity: 1 }],
       { duration: 190, delay, fill: 'backwards' });
     groups.forEach(group => {
@@ -653,16 +723,16 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
         const x = start.x + start.width / 2 - end.x - end.width / 2;
         const y = start.y + start.height / 2 - end.y - end.height / 2;
         const movement = 'translate(' + x + 'px,' + y + 'px) scale(.8)';
-        const flightDelay = delay + 165 + index * exponentInterval;
+        const flightDelay = delay + 180 + index * exponentInterval;
         animate(power, [{ backgroundColor: 'transparent' }, { backgroundColor: '#fae49b', offset: .22 },
-          { backgroundColor: 'transparent' }], { duration: 620, delay: flightDelay - 95 });
+          { backgroundColor: 'transparent' }], { duration: 680, delay: flightDelay - 120 });
         animate(addend, [{ opacity: 0, transform: movement }, { opacity: 1, offset: .24 },
-          { opacity: 1, transform: 'none' }], { duration: 480, delay: flightDelay, easing: 'ease-in-out', fill: 'backwards' });
-        appear(operators[index], flightDelay + 365);
+          { opacity: 1, transform: 'none' }], { duration: 550, delay: flightDelay, easing: 'ease-in-out', fill: 'backwards' });
+        appear(operators[index], flightDelay + 545);
       });
-      const answerDelay = delay + (powers.length ? 335 + powers.length * exponentInterval : 350);
+      const answerDelay = delay + (powers.length ? 320 + powers.length * exponentInterval : 400);
       appear(group.querySelector('.degree-number'), answerDelay);
-      delay = answerDelay + 165;
+      delay = answerDelay + 210;
     });
   }
 
@@ -811,7 +881,12 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     board.toggleAttribute('data-show-degrees', step >= 2);
     list.setAttribute('aria-label', step === 0 ? '單項式' : '多項式各項，按算式次序');
     polynomialVariables.hidden = step < 2;
-    id('stage-hint').textContent = selection === 0 && step === 0 ? '以下都是單項式' : stages[step][1];
+    const hint = id('stage-hint');
+    if (step === 2) {
+      hint.innerHTML = stages[step][1].replace(/次數|指數之和/g, '<strong class="rule-emphasis degree-emphasis">$&</strong>');
+    } else {
+      hint.textContent = selection === 0 && step === 0 ? '以下都是單項式' : stages[step][1];
+    }
     showCoefficientIntro();
     groups.forEach((group, index) => {
       group.querySelector('.term-index').hidden = true;
