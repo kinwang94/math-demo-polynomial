@@ -289,7 +289,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   border-top: 1px solid var(--line); background: #f4f8fd;
 }
 .polynomial-variables { grid-column: 1 / -1; padding: 10px 16px 1px; color: var(--muted); font-size: .875rem; }
-.polynomial-variables var { font: italic 1.15em var(--math); color: var(--blue); }
+.polynomial-variables var, .solve-variables var { font: italic 1.15em var(--math); color: var(--blue); }
 .stat { min-height: 70px; display: flex; align-content: center; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0 10px; text-align: center; padding: 5px; }
 .stat + .stat { border-inline-start: 1px solid var(--line); }
 .result-label { color: var(--muted); font-size: .9rem; font-weight: 700; }
@@ -334,6 +334,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
 .solve-board { padding: 26px clamp(10px, 3.4vw, 34px) 24px; background: linear-gradient(#f8fbff, white 68%); text-align: center; }
 .solve-demand { margin-top: 3px; color: var(--muted); }
 .solve-expression { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 7px; min-height: 92px; margin: 17px 0 14px; font: clamp(1.1rem, 3.5vw, 2.35rem)/1.35 var(--math); }
+.solve-variables { max-width: 740px; margin: 0 auto 12px; color: var(--muted); font-size: .875rem; text-align: left; }
 .solve-term { white-space: nowrap; padding: .2em .32em; border: 1px solid transparent; border-radius: 7px; }
 .solve-term sup { font-size: .62em; line-height: 0; }
 .solve-board [data-family="a"] { --family-text: #204e92; --family-fill: #eaf2ff; --family-edge: #c0d5f6; }
@@ -471,6 +472,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
       <p id="solve-condition" class="hint"></p>
       <p class="solve-demand">求 <var class="math">m</var>、<var class="math">n</var> 的值。</p>
       <div id="solve-expression" class="solve-expression" aria-label="多項式"></div>
+      <p id="solve-variables" class="solve-variables"></p>
       <p id="solve-setup-note" class="solve-setup-note" hidden>「不含」就是要讓框起的兩項消失。這兩項的係數必須為 0，乘上字母部分後，整項就等於 0。</p>
       <div id="solve-method" class="solve-method" hidden></div>
       <p id="solve-hint" class="solve-hint"></p>
@@ -503,6 +505,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   const workedExamples = [
     {
       condition: '化簡後不含二次項及一次項',
+      letters: ['x'],
       intro: '先找含 x^2 的二次項和含 x 的一次項。',
       findTerms: true,
       rule: '題目只要求二次項和一次項消失，三次項和常數項可以保留。',
@@ -525,6 +528,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     },
     {
       condition: '化簡後是五次三項式（m 為非負整數）',
+      letters: ['x', 'y'],
       intro: '「五次」指最高次數是 5，「三項式」指化簡後有 3 項。',
       rule: '用次數找出指數中的 m，再用項數找出係數中的 n。',
       original: [['3x^2y^{m + 1}', 'a'], ['+ (n − 4)y^2', 'b'], ['− 2x'], ['+ 5']],
@@ -546,6 +550,8 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     },
     {
       condition: '化簡後不含字母 y（m 為非負整數）',
+      letters: ['x', 'y'],
+      verifiedLetters: ['x'],
       intro: '找出可能含 y 的兩項，再看每一項怎樣去掉 y。',
       rule: '指數為 0，字母因式化成 1。係數為 0，整項消失。',
       original: [['6x^2y^m', 'a'], ['+ (n − 4)y', 'b'], ['+ 5x'], ['+ 7']],
@@ -598,6 +604,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   const solveStepButtons = [...document.querySelectorAll('[data-solve-step]')];
   const solveBoard = id('solve-board');
   const solveExpression = id('solve-expression');
+  const solveVariables = id('solve-variables');
   const solveMethod = id('solve-method');
   const coefficientToggle = id('coefficient-toggle');
   const practicePanel = id('practice');
@@ -646,7 +653,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
       return { coefficient, variables, degree };
     });
     const lettersUsed = [...new Set(terms.flatMap(term => term.variables.map(([letter]) => letter)))].sort();
-    polynomialVariables.innerHTML = '關於 ' + lettersUsed.map(letter => '<var>' + letter + '</var>').join('、') + ' 的多項式';
+    showPolynomialVariables(polynomialVariables, lettersUsed);
     list.toggleAttribute('data-dense', terms.length > 4);
     list.innerHTML = terms.map(({ coefficient, variables, degree }, index) => {
       const magnitude = Math.abs(coefficient);
@@ -711,6 +718,10 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
       if (exponent === undefined) return variable;
       return variable + '<sup>' + exponent.replace(/[a-z]/g, variableMarkup) + '</sup>';
     });
+  }
+
+  function showPolynomialVariables(target, letters) {
+    target.innerHTML = mathMarkup('關於 ' + letters.join('、') + ' 的多項式');
   }
 
   function showCoefficientIntro() {
@@ -787,6 +798,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     solveBoard.toggleAttribute('data-finding', finding);
     solvePanel.toggleAttribute('data-find-step', Boolean(example.findTerms));
     solveExpression.innerHTML = workedTermsMarkup(expression);
+    showPolynomialVariables(solveVariables, example.letters);
     id('solve-setup-note').hidden = !settingUp || !example.findTerms;
     solveMethod.hidden = !showMethod;
     solveMethod.innerHTML = showMethod ? example.constraints.map((item, index) =>
@@ -827,6 +839,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     const result = '<span class="solve-term">' + mathMarkup(example.simplified) + '</span>';
     const announceResult = () => {
       id('solve-hint').innerHTML = mathMarkup(example.conclusion);
+      if (example.verifiedLetters) showPolynomialVariables(solveVariables, example.verifiedLetters);
       id('solve-announce').textContent = '化簡結果是 ' + example.simplified;
     };
     if (reducedMotion.matches) {
