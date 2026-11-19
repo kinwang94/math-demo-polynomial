@@ -1,0 +1,1008 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#edf3fa">
+<meta name="description" content="逐步觀察單項式組成多項式，數項，找出最高次數。">
+<title>多項式動畫</title>
+<style>
+:root {
+  color-scheme: light;
+  --paper: #edf3fa;
+  --grid: #dbe5f1;
+  --line: #d1deee;
+  --ink: #182b48;
+  --muted: #4d617a;
+  --blue: #2455a1;
+  --white: #fff;
+  --gold: #89500b;
+  --gold-pale: #fff0c6;
+  --sans: "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", sans-serif;
+  --math: "Cambria Math", "Latin Modern Math", "Computer Modern", "STIX Two Math", "Times New Roman", serif;
+}
+* { box-sizing: border-box; }
+body {
+  min-width: 0;
+  margin: 0;
+  color: var(--ink);
+  font: 16px/1.5 var(--sans);
+  background: var(--paper);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+main {
+  display: grid; grid-template-columns: 86px minmax(0, 1fr);
+  align-items: start; gap: 12px;
+  width: min(100% - 32px, 1080px); margin: 0 auto; padding: 32px 0;
+}
+p { margin: 0; }
+[hidden] { display: none !important; }
+button {
+  font: inherit;
+  color: inherit;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background-color: var(--white);
+  font-size: .875rem;
+  font-weight: 700;
+}
+button { cursor: pointer; }
+button:disabled { cursor: default; color: #586b82; background: #f4f7fb; }
+button:hover:not(:disabled) { border-color: var(--blue); background-color: #eff5ff; }
+button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+.examples { display: grid; gap: 6px; }
+.examples button { padding: 0 4px; white-space: nowrap; }
+.examples button[aria-pressed="true"] { border-color: var(--blue); background: var(--blue); color: white; }
+.panel { overflow: hidden; background: var(--white); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 30px #284b7012; }
+.steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--line); }
+.steps button { border: 0; border-inline-end: 1px solid var(--line); border-radius: 0; min-height: 54px; padding: 5px 4px; }
+.steps button:last-child { border-inline-end: 0; }
+.steps button:focus-visible { outline-offset: -4px; }
+.steps button[aria-current="step"] { background: #eaf2ff; box-shadow: inset 0 -3px var(--blue); color: #163e7c; }
+.board {
+  container-type: inline-size;
+  --edge: clamp(10px, 3.4vw, 34px);
+  position: relative;
+  padding: 26px var(--edge) 18px;
+  background: linear-gradient(#f8fbff, white 68%);
+}
+.hint { min-height: 1.5em; text-align: center; text-wrap: balance; color: var(--muted); font-size: 1rem; font-weight: 700; }
+.rule-emphasis { display: inline-block; margin-inline-start: .2em; padding: .1em .3em; border-radius: .25em; background: #e3edff; color: #164584; font-weight: 800; line-height: 1.25; }
+.track { display: grid; grid-template-columns: minmax(0, 1fr); place-items: start center; position: relative; min-height: 206px; padding-top: 33px; }
+.track::before {
+  content: "";
+  position: absolute;
+  inset: 119px 0 auto;
+  border-top: 1px dashed var(--line);
+  opacity: 0;
+}
+[data-step="0"] .track::before { opacity: 1; }
+.term-list {
+  --plus-gap: clamp(11px, 4cqw, 34px);
+  width: 100%; display: flex; align-items: flex-start; justify-content: center;
+  position: relative; z-index: 1; padding-top: 12px;
+}
+[data-step="0"] .term-list { padding-top: 0; gap: clamp(7px, 3.9cqw, 42px); }
+[data-step="0"] .term-list[data-dense] { gap: clamp(5px, 2.3cqw, 26px); }
+.term-group {
+  --accent: #23569a;
+  --fill: #e6f0ff;
+  --border: #b7d0f7;
+  position: relative; flex: 0 0 auto; text-align: center;
+}
+[data-show-polynomial] .term-group + .term-group { margin-inline-start: clamp(6px, 1.45cqw, 15px); }
+[data-show-polynomial] .term-group:has(.joiner:not(.signed-joiner)),
+[data-building] .term-group:has(.joiner) { margin-inline-start: var(--plus-gap); }
+.term-group:nth-child(2) { --accent: #604593; --fill: #f0eaff; --border: #d8c8f4; }
+.term-group:nth-child(3) { --accent: #206448; --fill: #e5f5ed; --border: #b4ddcb; }
+.term-group:nth-child(4) { --accent: #8a3b56; --fill: #faeaf0; --border: #efc6d5; }
+.term-group.highest { --accent: var(--gold); --fill: var(--gold-pale); --border: #d7a341; }
+.tile {
+  min-width: clamp(42px, 15.2cqw, 115px);
+  padding: .12em clamp(3px, 1.25vw, 13px) .18em;
+  display: grid; place-items: center; height: clamp(49px, 8vw, 82px);
+  color: var(--accent); border: 1px solid var(--border);
+  border-bottom-width: 3px; border-radius: 10px; background: var(--fill);
+  white-space: nowrap;
+  font: clamp(1.42rem, 5.4cqw, 3rem)/1 var(--math);
+}
+[data-step="0"] .tile { min-width: clamp(48px, 18cqw, 148px); height: clamp(54px, 8.7vw, 91px); }
+[data-step="0"] .term-list[data-dense] .tile { min-width: clamp(41px, 13.2cqw, 135px); }
+.math { font-family: var(--math); font-variant-numeric: lining-nums tabular-nums; }
+.tile sup { font-size: .59em; line-height: 0; border-radius: 3px; }
+.tile var { font-style: italic; }
+.kind {
+  position: absolute; inset: auto auto auto 50%; transform: translateX(-50%);
+  margin-top: 9px; white-space: nowrap; color: var(--accent); visibility: hidden;
+  font-size: clamp(.6875rem, 2.7vw, .875rem); font-weight: 700;
+}
+[data-step="0"] .kind { visibility: visible; }
+.kind-coefficient, .coefficient-inferred { display: none; }
+[data-coefficients] .kind-default { display: none; }
+[data-coefficients] .kind-coefficient, [data-coefficients] .coefficient-inferred { display: inline; }
+[data-coefficients] .coefficient-part { border-radius: .12em; padding-inline: .035em; background: #ffe39a; color: #713e06; }
+.coefficient-toggle { position: absolute; bottom: 11px; left: 50%; transform: translateX(-50%); padding: 0 14px; z-index: 2; }
+.coefficient-toggle[aria-pressed="true"] { background: #eaf2ff; border-color: var(--blue); color: var(--blue); }
+.tile .implicit { font-size: 0; visibility: hidden; }
+[data-step="2"] .implicit { font-size: .59em; visibility: visible; }
+[data-step="2"] .tile sup {
+  font-weight: 750;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: .1em;
+}
+[data-practice] .tile .implicit { font-size: 0; visibility: hidden; }
+.joiner {
+  position: absolute; right: 100%; top: 0; width: var(--plus-gap);
+  display: grid; place-items: center; height: clamp(49px, 8vw, 82px);
+  font: clamp(.94rem, 3.1vw, 2.25rem)/1 var(--math); pointer-events: none;
+}
+.bracket { display: none; }
+[data-building] .bracket { display: inline; }
+[data-step="0"] .joiner, .signed-joiner { visibility: hidden; }
+[data-building] .signed-joiner { visibility: visible; }
+.degree {
+  visibility: hidden;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  color: var(--accent); font-size: .875rem; font-weight: 700;
+}
+:not([data-show-degrees]).board .degree { display: none; }
+[data-show-degrees] .degree { visibility: visible; }
+[data-practice][data-step="2"] .term-group:not(.answered) .degree { visibility: hidden; }
+.term-group.question .tile { outline: 2px solid var(--blue); outline-offset: 2px; }
+.pointer {
+  position: absolute; z-index: 2; inset: -23px auto auto 50%; margin-left: -10px;
+  width: 20px; height: 18px; background: var(--blue);
+  clip-path: polygon(34% 0, 66% 0, 66% 43%, 100% 43%, 50% 100%, 0 43%, 34% 43%);
+}
+.term-index {
+  position: absolute; z-index: 2; inset: -29px auto auto 50%;
+  display: grid; place-items: center; width: 23px; height: 23px; margin-left: -11.5px;
+  border-radius: 50%; background: var(--accent); color: white; font: 700 .875rem/1 var(--math);
+}
+.degree::before { content: ""; display: block; height: 13px; border-left: 1px solid currentColor; opacity: .6; }
+.degree-detail { display: grid; place-items: center; height: clamp(18px, 3vw, 25px); white-space: nowrap; line-height: 1.05; }
+.degree-detail.math { display: flex; align-items: center; justify-content: center; gap: .22em; font-size: clamp(1rem, 2.6vw, 1.5rem); }
+.degree-number {
+  display: grid; place-items: center; min-width: 2.05rem; min-height: 2rem;
+  border: 1px solid var(--border); border-radius: 5px; padding: 0 5px;
+  background: var(--fill); font-size: clamp(1.23rem, 3vw, 1.7rem); line-height: 1;
+}
+.highest .degree-number { border-color: var(--gold); box-shadow: 0 0 0 2px #f6d988; }
+.result {
+  position: relative; min-height: 104px; display: grid; align-content: center; grid-template-columns: 1fr 1fr;
+  border-top: 1px solid var(--line); background: #f4f8fd;
+}
+.polynomial-variables { grid-column: 1 / -1; padding: 10px 16px 1px; color: var(--muted); font-size: .875rem; }
+.polynomial-variables var { font: italic 1.15em var(--math); color: var(--blue); }
+.stat { min-height: 70px; display: flex; align-content: center; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0 10px; text-align: center; padding: 5px; }
+.stat + .stat { border-inline-start: 1px solid var(--line); }
+.result-label { color: var(--muted); font-size: .9rem; font-weight: 700; }
+.answer { min-width: 1.3em; color: var(--blue); font: 700 clamp(1.7rem, 4vw, 2.85rem)/1 var(--math); }
+.degree-answer { color: var(--gold); }
+.unknown { color: #64758b; }
+.result-note { flex: 0 0 100%; font-size: .875rem; font-weight: 700; color: var(--blue); }
+.degree-note { color: var(--gold); }
+.classification { grid-column: 1 / -1; justify-self: center; margin: 6px 0 12px; padding: 5px 16px; border: 1px solid var(--line); border-radius: 2rem; background: white; font-size: 1.125rem; font-weight: 700; }
+.classification-degree { color: var(--gold); }
+.classification-count { color: var(--blue); }
+.classification-token { position: absolute; z-index: 2; pointer-events: none; font: 700 1rem/1 var(--math); }
+.practice { min-height: 56px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.practice button { display: grid; place-items: center; width: 50px; padding: 0; background: var(--blue); color: white; }
+.practice button:hover { background: #173d79; }
+.practice-progress { min-width: 3.2em; color: var(--muted); font: 600 .875rem var(--math); }
+.feedback { color: #206448; font-size: .875rem; font-weight: 700; }
+.controls { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; padding: 16px 10px; border-top: 1px solid var(--line); }
+.controls button { display: grid; place-items: center; width: 48px; padding: 0; }
+#play { width: 60px; border-color: var(--ink); background: var(--ink); color: white; }
+#play:hover { background: var(--blue); }
+.panel:has([data-building], [data-await-count]) #next:not(:disabled) { border-color: var(--blue); background: #eaf2ff; color: var(--blue); }
+.icon { width: 22px; height: 22px; position: relative; }
+.icon::before, .icon::after { content: ""; position: absolute; }
+.icon--play::before, .icon--step::before {
+  top: 4px; left: 7px; border-block: 7px solid transparent; border-left: 11px solid currentColor;
+}
+.icon--previous { transform: scaleX(-1); }
+.icon--step::before { left: 4px; }
+.icon--step::after {
+  top: 4px; left: 16px; width: 2px; height: 14px; border-radius: 1px; background: currentColor;
+}
+.icon--pause::before, .icon--pause::after {
+  top: 4px; left: 6px; width: 3px; height: 14px; border-radius: 1px; background: currentColor;
+}
+.icon--pause::after { left: 13px; }
+.icon--reset::before, .icon--replay::before { inset: -1px 0 0; font: 24px/22px "Segoe UI Symbol", Arial, sans-serif; text-align: center; }
+.icon--reset::before { content: "↺"; }
+.icon--replay::before { content: "↻"; }
+.icon--reveal::before { inset: 5px 2px; border: 1.7px solid currentColor; border-radius: 78% 78%; }
+.icon--reveal::after { inset: 8px; border: 1.6px solid currentColor; border-radius: 50%; }
+.solve-board { padding: 26px clamp(10px, 3.4vw, 34px) 24px; background: linear-gradient(#f8fbff, white 68%); text-align: center; }
+.solve-demand { margin-top: 3px; color: var(--muted); }
+.solve-expression { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 7px; min-height: 92px; margin: 17px 0 14px; font: clamp(1.1rem, 3.5vw, 2.35rem)/1.35 var(--math); }
+.solve-term { white-space: nowrap; padding: .2em .32em; border: 1px solid transparent; border-radius: 7px; }
+.solve-term sup { font-size: .62em; line-height: 0; }
+.solve-board [data-family="a"] { --family-text: #204e92; --family-fill: #eaf2ff; --family-edge: #c0d5f6; }
+.solve-board [data-family="b"] { --family-text: #604593; --family-fill: #f1ecfc; --family-edge: #dacef1; }
+.solve-board[data-solve-active] .solve-term[data-family] { color: var(--family-text); background: var(--family-fill); border-color: var(--family-edge); }
+.solve-method { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; max-width: 570px; margin-inline: auto; }
+.solve-constraint { display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 98px; padding: 10px 5px; border-radius: 7px; background: var(--family-fill); border: 1px solid var(--family-edge); color: var(--family-text); }
+.solve-constraint-label { font-size: .875rem; font-weight: 700; }
+.solve-equation, .solve-value { font: clamp(1.125rem, 2.8vw, 1.65rem)/1.24 var(--math); }
+.solve-combine { font: clamp(.875rem, 2.1vw, 1.25rem)/1.25 var(--math); white-space: nowrap; }
+.solve-value { font-weight: 700; }
+.solve-hint { min-height: 1.5em; margin: 12px 0 0; color: var(--muted); font-size: .9rem; }
+.solve-hint .math { font-size: 1.15em; }
+#solve-next:not(:disabled) { border-color: var(--blue); background: var(--blue); color: white; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (max-width: 620px) {
+  main { grid-template-columns: minmax(0, 1fr); gap: 8px; width: calc(100% - 20px); padding: 12px 0; }
+  .examples { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+  .examples button { padding: 0 2px; }
+  .examples [data-solve="0"] { grid-column: 1; }
+  .steps button { min-height: 55px; font-size: .875rem; }
+  .board { padding-top: 19px; padding-bottom: 4px; }
+  .track { min-height: 168px; padding-top: 18px; }
+  .track::before { inset-block-start: 83px; }
+  .result { min-height: 85px; }
+  .stat { gap: 0 5px; }
+  .solve-board { padding-top: 19px; }
+  .solve-expression { gap: 4px; min-height: 78px; }
+  .solve-method { gap: 5px; }
+}
+@media (max-width: 480px) {
+  .term-list[data-dense] { --plus-gap: 11px; }
+  [data-step="0"] .term-list[data-dense] { gap: 5px; }
+  .term-list[data-dense] .tile, [data-step="0"] .term-list[data-dense] .tile { min-width: clamp(36px, 11vw, 52px); padding-inline: 3px; font-size: clamp(1rem, 4.55vw, 1.35rem); }
+  [data-show-polynomial]:not([data-building]) .term-list[data-dense] .term-group:has(.signed-joiner) { margin-inline-start: 4px; }
+  .term-list[data-dense] .degree-detail.math { font-size: .875rem; }
+  [data-building] .term-list { --plus-gap: 9px; }
+  [data-building] .term-list .tile { min-width: 34px; padding-inline: 2px; font-size: clamp(.9375rem, 4.5vw, 1.25rem); }
+}
+@media (max-width: 355px) {
+  .examples button { font-size: .8125rem; }
+  .steps button { font-size: .8125rem; padding-inline: 1px; }
+  [data-step="0"] .term-list { gap: 8px; }
+}
+</style>
+</head>
+<body>
+<main>
+  <nav class="examples" aria-label="選擇題目">
+    <button type="button" data-example="0" aria-pressed="true">例 1</button>
+    <button type="button" data-example="1" aria-pressed="false">例 2</button>
+    <button type="button" data-example="2" aria-pressed="false">練習 1</button>
+    <button type="button" data-example="3" aria-pressed="false">練習 2</button>
+    <button type="button" data-example="4" aria-pressed="false">練習 3</button>
+    <button type="button" data-example="5" aria-pressed="false">練習 4</button>
+    <button type="button" data-example="6" aria-pressed="false">練習 5</button>
+    <button type="button" data-example="7" aria-pressed="false">練習 6</button>
+    <button type="button" data-example="8" aria-pressed="false">練習 7</button>
+    <button type="button" data-solve="0" aria-pressed="false">例 3</button>
+    <button type="button" data-solve="1" aria-pressed="false">例 4</button>
+    <button type="button" data-solve="2" aria-pressed="false">例 5</button>
+  </nav>
+  <section class="panel" id="demo-panel" aria-label="多項式動畫">
+    <nav class="steps" aria-label="動畫步驟">
+      <button type="button" data-go="0" aria-current="step">單項式</button>
+      <button type="button" data-go="1">組合</button>
+      <button type="button" data-go="2">各項次數</button>
+      <button type="button" data-go="3">最高次數</button>
+    </nav>
+    <div id="board" class="board" data-step="0">
+      <p class="hint" id="stage-hint"></p>
+      <div class="track">
+        <div id="terms" class="term-list" role="group" aria-label="單項式"></div>
+      </div>
+      <button type="button" class="coefficient-toggle" id="coefficient-toggle" aria-pressed="false" hidden>係數</button>
+      <div class="practice" id="practice" hidden>
+        <span class="practice-progress" id="practice-progress" aria-hidden="true" hidden></span>
+        <button type="button" id="reveal" aria-label="顯示答案" title="顯示答案"><span class="icon icon--reveal" aria-hidden="true"></span></button>
+        <p id="feedback" class="feedback" role="status" hidden>完成</p>
+      </div>
+    </div>
+    <div class="result">
+      <p class="polynomial-variables" id="polynomial-variables" hidden></p>
+      <div class="stat">
+        <span class="result-label">項數</span>
+        <strong id="term-count" class="answer unknown">—</strong>
+        <span id="count-reason" class="result-note count-note" hidden></span>
+      </div>
+      <div class="stat">
+        <span class="result-label">多項式次數</span>
+        <strong id="polynomial-degree" class="answer degree-answer unknown">—</strong>
+        <span id="degree-reason" class="result-note degree-note" hidden></span>
+      </div>
+      <p id="classification" class="classification" hidden><span class="classification-degree"><span></span>次</span><span class="classification-count"><span></span>項式</span></p>
+    </div>
+    <div class="controls" role="group" aria-label="播放控制">
+      <button type="button" id="reset" aria-label="重設" title="重設"><span class="icon icon--reset" aria-hidden="true"></span></button>
+      <button type="button" id="prev" aria-label="上一步" title="上一步" disabled><span class="icon icon--step icon--previous" aria-hidden="true"></span></button>
+      <button type="button" id="play" aria-label="自動播放" title="自動播放"><span class="icon icon--play" aria-hidden="true"></span></button>
+      <button type="button" id="next" aria-label="下一步" title="下一步"><span class="icon icon--step" aria-hidden="true"></span></button>
+    </div>
+    <p id="announce" class="sr-only" role="status"></p>
+  </section>
+  <section class="panel" id="solve-panel" aria-label="求參數示範" hidden>
+    <nav class="steps" aria-label="推理步驟">
+      <button type="button" data-solve-step="0" aria-current="step">題目</button>
+      <button type="button" data-solve-step="1">列式</button>
+      <button type="button" data-solve-step="2">求值</button>
+      <button type="button" data-solve-step="3">驗證</button>
+    </nav>
+    <div class="solve-board" id="solve-board">
+      <p id="solve-condition" class="hint"></p>
+      <p class="solve-demand">求 <var class="math">m</var>、<var class="math">n</var> 的值。</p>
+      <div id="solve-expression" class="solve-expression" aria-label="多項式"></div>
+      <div id="solve-method" class="solve-method" hidden></div>
+      <p id="solve-hint" class="solve-hint"></p>
+      <p id="solve-announce" class="sr-only" role="status"></p>
+    </div>
+    <div class="controls" role="group" aria-label="示範控制">
+      <button type="button" id="solve-reset" aria-label="重設" title="重設"><span class="icon icon--reset" aria-hidden="true"></span></button>
+      <button type="button" id="solve-prev" aria-label="上一步" title="上一步"><span class="icon icon--step icon--previous" aria-hidden="true"></span></button>
+      <button type="button" id="solve-next" aria-label="下一步" title="下一步"><span class="icon icon--step" aria-hidden="true"></span></button>
+    </div>
+  </section>
+  <noscript><p>請開啟 JavaScript 以播放動畫。</p></noscript>
+</main>
+<script>
+  'use strict';
+
+  const examples = [
+    [[3, { x: 2 }], [-2, { x: 1, y: 3 }], [1, { y: 1 }], [-7, {}]],
+    [[-4, {}], [6, { a: 1, b: 1 }], [-1, { a: 2, b: 1 }], [-3, { b: 4 }], [2, { a: 3, b: 2 }]]
+  ];
+  const exercises = [
+    [[2, { x: 4, y: 1 }], [-3, { x: 2 }], [7, { y: 1 }], [1, {}]],
+    [[-2, { a: 1, b: 2 }], [5, { a: 2, b: 2 }], [-1, { b: 3 }], [8, {}]],
+    [[4, { m: 2, n: 1 }], [-6, { p: 1 }], [5, { m: 1, n: 4, p: 1 }], [-2, { m: 2 }], [9, {}]],
+    [[-8, {}], [3, { p: 2, q: 2 }], [-4, { p: 3, q: 1 }], [2, { p: 1, q: 1 }], [-7, { q: 1 }]],
+    [[6, { s: 2, t: 1 }], [-5, { s: 1, t: 3 }], [3, { s: 1 }], [-2, { t: 1 }]],
+    [[-3, { a: 2, b: 2, c: 1 }], [8, { a: 3 }], [-2, { b: 1, c: 1 }], [11, {}], [-4, { c: 2 }]],
+    [[5, { u: 1, v: 2 }], [-1, { u: 4, v: 2 }], [7, { u: 2, w: 1 }], [-3, { v: 3 }], [6, {}]]
+  ];
+  const workedExamples = [
+    {
+      condition: '化簡後不含二次項及一次項',
+      original: [['2x^3'], ['+ (m − 2)x^2', 'a'], ['+ (n + 3)x', 'b'], ['+ 5']],
+      constraints: [
+        { label: '二次項的係數', equation: 'm − 2 = 0', value: 'm = 2' },
+        { label: '一次項的係數', equation: 'n + 3 = 0', value: 'n = −3' }
+      ],
+      substitution: [['2x^3'], ['+ 0 · x^2', 'a', true], ['+ 0 · x', 'b', true], ['+ 5']],
+      simplified: '2x^3 + 5'
+    },
+    {
+      condition: '化簡後不含二次項及一次項',
+      original: [['(m − 1)x^2', 'a'], ['+ 3x^2', 'a'], ['+ (n − 4)x', 'b'], ['− 2x', 'b'], ['+ 7']],
+      combined: [['(m + 2)x^2', 'a'], ['+ (n − 6)x', 'b'], ['+ 7']],
+      constraints: [
+        { label: '二次項的係數', combine: '(m − 1) + 3 = m + 2', equation: 'm + 2 = 0', value: 'm = −2' },
+        { label: '一次項的係數', combine: '(n − 4) − 2 = n − 6', equation: 'n − 6 = 0', value: 'n = 6' }
+      ],
+      substitution: [['0 · x^2', 'a', true], ['+ 0 · x', 'b', true], ['+ 7']],
+      simplified: '7'
+    },
+    {
+      condition: '化簡後是常數（m 為非負整數）',
+      original: [['4x^m', 'a'], ['+ (n − 1)y', 'b'], ['+ 7']],
+      constraints: [
+        { label: 'x 的指數', equation: 'x^m = 1', value: 'm = 0' },
+        { label: 'y 項的係數', equation: 'n − 1 = 0', value: 'n = 1' }
+      ],
+      substitution: [['4x^0', 'a'], ['+ 0 · y', 'b', true], ['+ 7']],
+      simplified: '4 + 7 = 11',
+      exponentExample: true
+    }
+  ];
+  const stages = [
+    ['單項式', ''],
+    ['多項式', '把單項式相加'],
+    ['各項次數', '單項式的次數是各字母的指數之和'],
+    ['多項式的次數', '多項式的次數是各項中的最高次數']
+  ];
+  const polynomialRule = '單項式的和是多項式';
+  const chinese = { 4: '四', 5: '五', 6: '六' };
+  const durations = [1500, 2350, 5900];
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const id = name => document.getElementById(name);
+  const demoPanel = id('demo-panel');
+  const solvePanel = id('solve-panel');
+  const board = id('board');
+  const list = id('terms');
+  const count = id('term-count');
+  const countReason = id('count-reason');
+  const degree = id('polynomial-degree');
+  const degreeReason = id('degree-reason');
+  const classification = id('classification');
+  const polynomialVariables = id('polynomial-variables');
+  const play = id('play');
+  const playIcon = play.firstElementChild;
+  const back = id('prev');
+  const next = id('next');
+  const stepButtons = [...document.querySelectorAll('[data-go]')];
+  const exampleButtons = [...document.querySelectorAll('[data-example]')];
+  const solveButtons = [...document.querySelectorAll('[data-solve]')];
+  const solveStepButtons = [...document.querySelectorAll('[data-solve-step]')];
+  const solveBoard = id('solve-board');
+  const solveExpression = id('solve-expression');
+  const solveMethod = id('solve-method');
+  const coefficientToggle = id('coefficient-toggle');
+  const practicePanel = id('practice');
+  const practiceProgress = id('practice-progress');
+  const reveal = id('reveal');
+  const feedback = id('feedback');
+  const pointer = document.createElement('span');
+  pointer.className = 'pointer';
+  pointer.setAttribute('aria-hidden', 'true');
+
+  let selection = 0;
+  let workedSelection = -1;
+  let workedStep = 0;
+  let verifyTimer;
+  let showingCoefficients = false;
+  let isPractice = false;
+  let counted = false;
+  let answered = 0;
+  let terms = [];
+  let step = 0;
+  let timer;
+  let assemblyTimer;
+  let countTimer;
+  let running = false;
+  let effects = [];
+
+  function loadExample(index) {
+    stop();
+    clearTimeout(verifyTimer);
+    selection = index;
+    workedSelection = -1;
+    showingCoefficients = false;
+    demoPanel.hidden = false;
+    solvePanel.hidden = true;
+    isPractice = index >= examples.length;
+    counted = false;
+    answered = 0;
+    board.toggleAttribute('data-practice', isPractice);
+    play.hidden = isPractice;
+    exampleButtons.forEach((button, position) => button.setAttribute('aria-pressed', position === index));
+    solveButtons.forEach(button => button.setAttribute('aria-pressed', false));
+    const source = isPractice ? exercises[index - examples.length] : examples[index];
+    terms = source.map(([coefficient, powers]) => {
+      const variables = Object.entries(powers);
+      const degree = variables.reduce((sum, [, exponent]) => sum + exponent, 0);
+      return { coefficient, variables, degree };
+    });
+    const lettersUsed = [...new Set(terms.flatMap(term => term.variables.map(([letter]) => letter)))].sort();
+    polynomialVariables.innerHTML = '關於 ' + lettersUsed.map(letter => '<var>' + letter + '</var>').join('、') + ' 的多項式';
+    list.toggleAttribute('data-dense', terms.length > 4);
+    list.innerHTML = terms.map(({ coefficient, variables, degree }, index) => {
+      const magnitude = Math.abs(coefficient);
+      const sign = coefficient < 0 ? '−' : '';
+      const number = magnitude === 1 && variables.length ? '' : magnitude;
+      const letters = variables.map(([variable, exponent]) =>
+        '<var>' + variable + '</var><sup' +
+        (exponent === 1 ? ' class="implicit" aria-hidden="true"' : '') +
+        '>' + exponent + '</sup>'
+      ).join('');
+      const sum = variables.map(([, exponent]) => '<span class="degree-addend">' + exponent + '</span>')
+        .join('<span class="degree-operator">+</span>');
+      const detail = variables.length
+        ? '<span class="degree-detail math">' + sum + '<span class="degree-operator">=</span></span>'
+        : '<span class="degree-detail">常數項</span>';
+      const needsBrackets = index > 0 && coefficient < 0;
+      const plus = index > 0 ? '<span class="joiner' + (needsBrackets ? ' signed-joiner' : '') + '">+</span>' : '';
+      const coefficientPart = selection === 0
+        ? '<span class="coefficient-part">' + sign +
+          (number === '' ? '<span class="coefficient-inferred">1</span>' : number) + '</span>'
+        : sign + number;
+      const body = coefficientPart + letters;
+      const expression = needsBrackets
+        ? '<span class="bracket">(</span>' + body + '<span class="bracket">)</span>'
+        : body;
+      const kind = !variables.length ? '純數字' : coefficient === 1 ? '純字母' : '數字 × 字母';
+      const kindLabel = selection === 0
+        ? '<span class="kind"><span class="kind-default">' + kind +
+          '</span><span class="kind-coefficient">係數 <span class="math">' + sign + magnitude + '</span></span></span>'
+        : '';
+      return '<div class="term-group">' + plus +
+        '<span class="term-index" aria-hidden="true" hidden>' + (index + 1) + '</span>' +
+        '<div class="tile"><span>' + expression + '</span></div>' +
+        kindLabel +
+        '<div class="degree">' + detail + '<strong class="degree-number math">' +
+        degree + '</strong></div></div>';
+    }).join('');
+    render(isPractice ? 1 : 0, true);
+  }
+
+  function animate(target, frames, options) {
+    if (!reducedMotion.matches) {
+      const effect = target.animate(frames, { easing: 'cubic-bezier(.22,.65,.25,1)', ...options });
+      effects.push(effect);
+      return effect;
+    }
+  }
+
+  function cancelEffects() {
+    effects.forEach(effect => effect.cancel());
+    effects = [];
+  }
+
+  function mathMarkup(text) {
+    return text.replace(/([a-z])(?:\^([a-z0-9]))?/g, (_, letter, exponent) =>
+      '<var>' + letter + '</var>' + (exponent === undefined ? '' : '<sup>' + exponent + '</sup>'));
+  }
+
+  function showCoefficientIntro() {
+    const available = selection === 0 && step === 0;
+    const visible = available && showingCoefficients;
+    coefficientToggle.hidden = !available;
+    coefficientToggle.setAttribute('aria-pressed', visible);
+    board.toggleAttribute('data-coefficients', visible);
+    if (available) {
+      id('stage-hint').textContent = visible ? '係數是單項式的數字因數' : '以下都是單項式';
+    }
+  }
+
+  function loadWorked(index) {
+    stop();
+    clearTimeout(assemblyTimer);
+    clearTimeout(countTimer);
+    workedSelection = index;
+    demoPanel.hidden = true;
+    solvePanel.hidden = false;
+    exampleButtons.forEach(button => button.setAttribute('aria-pressed', false));
+    solveButtons.forEach((button, position) => button.setAttribute('aria-pressed', position === index));
+    renderWorked(0);
+  }
+
+  function renderWorked(destination) {
+    clearTimeout(verifyTimer);
+    cancelEffects();
+    workedStep = destination;
+    const example = workedExamples[workedSelection];
+    const solving = destination >= 1;
+    const hasValues = destination >= 2;
+    const verifying = destination === 3;
+    const expression = verifying ? example.substitution : solving && example.combined ? example.combined : example.original;
+    id('solve-condition').innerHTML = mathMarkup(example.condition);
+    const hint = id('solve-hint');
+    hint.replaceChildren();
+    solveBoard.toggleAttribute('data-solve-active', solving);
+    solveExpression.innerHTML = expression.map(([term, family, remove]) =>
+      '<span class="solve-term"' + (family ? ' data-family="' + family + '"' : '') +
+      (remove ? ' data-zero' : '') + '>' + mathMarkup(term) + '</span>').join('');
+    solveMethod.hidden = !solving;
+    solveMethod.innerHTML = solving ? example.constraints.map(({ label, combine, equation, value }, index) =>
+      '<div class="solve-constraint" data-family="' + (index === 0 ? 'a' : 'b') + '">' +
+      '<span class="solve-constraint-label">' + mathMarkup(label) + '</span>' +
+      (combine ? '<span class="solve-combine">' + mathMarkup(combine) + '</span>' : '') +
+      '<span class="solve-equation">' + mathMarkup(equation) + '</span>' +
+      (hasValues ? '<strong class="solve-value">' + mathMarkup(value) + '</strong>' : '') +
+      '</div>').join('') : '';
+    solveStepButtons.forEach((button, index) => {
+      if (index === destination) button.setAttribute('aria-current', 'step');
+      else button.removeAttribute('aria-current');
+    });
+    id('solve-prev').disabled = destination === 0;
+    id('solve-next').disabled = verifying;
+    if (destination === 1) {
+      hint.textContent = example.combined ? '先合併同類項，再把指定項的係數設為 0。'
+        : example.exponentExample ? '含字母的部分化為常數或消失。' : '不含某次項，該次項的係數就是 0。';
+      [...solveMethod.children].forEach((card, index) => animate(card,
+        [{ opacity: 0, transform: 'translateY(-5px)' }, { opacity: 1, transform: 'none' }],
+        { duration: 260, delay: index * 160, fill: 'backwards' }));
+    }
+    if (destination === 2) {
+      solveMethod.querySelectorAll('.solve-value').forEach((value, index) => animate(value,
+        [{ opacity: 0 }, { opacity: 1 }], { duration: 260, delay: index * 180, fill: 'backwards' }));
+    }
+    const revealed = solving ? example.constraints.map(item => hasValues ? item.value : item.equation) : [];
+    id('solve-announce').textContent = revealed.join('。');
+    if (verifying) verifyWorked(example);
+  }
+
+  function verifyWorked(example) {
+    id('solve-hint').innerHTML = example.exponentExample
+      ? '<span class="math">' + mathMarkup('x^0') + '</span> 化為 1，係數為 0 的項消失。'
+      : '係數為 0，該項消失。';
+    const result = '<span class="solve-term">' + mathMarkup(example.simplified) + '</span>';
+    const announceResult = () => {
+      id('solve-announce').textContent = '化簡結果是 ' + example.simplified;
+    };
+    if (reducedMotion.matches) {
+      solveExpression.insertAdjacentHTML('beforeend', '<span>=</span>' + result);
+      announceResult();
+      return;
+    }
+    solveExpression.querySelectorAll('[data-zero]').forEach((term, index) =>
+      animate(term, [{ opacity: 1 }, { opacity: 0, transform: 'translateY(6px)' }],
+        { duration: 340, delay: 1300 + index * 100, fill: 'forwards' }));
+    verifyTimer = setTimeout(() => {
+      solveExpression.innerHTML = result;
+      animate(solveExpression.firstElementChild, [{ opacity: 0 }, { opacity: 1 }], { duration: 260 });
+      announceResult();
+    }, 1770);
+  }
+
+  function slideTile(tile, before, delay = 0, duration = 530) {
+    const after = tile.getBoundingClientRect();
+    const transform = 'translate(' + (before.x - after.x) + 'px,' +
+      (before.y - after.y) + 'px) scale(' + (before.width / after.width) + ',' +
+      (before.height / after.height) + ')';
+    animate(tile, [{ transform, transformOrigin: 'top left' }, { transform: 'none', transformOrigin: 'top left' }],
+      { duration, delay, fill: 'backwards' });
+  }
+
+  function playDegreeDemo(groups, delay) {
+    const exponentInterval = 385;
+    const appear = (target, delay) => animate(target, [{ opacity: 0 }, { opacity: 1 }],
+      { duration: 190, delay, fill: 'backwards' });
+    groups.forEach(group => {
+      appear(group.querySelector('.degree'), delay);
+      const powers = [...group.querySelectorAll('.tile sup')];
+      const addends = [...group.querySelectorAll('.degree-addend')];
+      const operators = [...group.querySelectorAll('.degree-operator')];
+      powers.forEach((power, index) => {
+        const start = power.getBoundingClientRect();
+        const addend = addends[index];
+        const end = addend.getBoundingClientRect();
+        const x = start.x + start.width / 2 - end.x - end.width / 2;
+        const y = start.y + start.height / 2 - end.y - end.height / 2;
+        const movement = 'translate(' + x + 'px,' + y + 'px) scale(.8)';
+        const flightDelay = delay + 165 + index * exponentInterval;
+        animate(power, [{ backgroundColor: 'transparent' }, { backgroundColor: '#fae49b', offset: .22 },
+          { backgroundColor: 'transparent' }], { duration: 620, delay: flightDelay - 95 });
+        animate(addend, [{ opacity: 0, transform: movement }, { opacity: 1, offset: .24 },
+          { opacity: 1, transform: 'none' }], { duration: 480, delay: flightDelay, easing: 'ease-in-out', fill: 'backwards' });
+        appear(operators[index], flightDelay + 365);
+      });
+      const answerDelay = delay + (powers.length ? 335 + powers.length * exponentInterval : 350);
+      appear(group.querySelector('.degree-number'), answerDelay);
+      delay = answerDelay + 165;
+    });
+  }
+
+  function playClassification(delay) {
+    if (reducedMotion.matches) return;
+    const result = classification.parentElement;
+    const bounds = result.getBoundingClientRect();
+    const parts = [...classification.children];
+    animate(classification, [{ opacity: 0 }, { opacity: 1 }],
+      { duration: 200, delay: delay + 270, fill: 'backwards' });
+
+    [degree, count].forEach((source, index) => {
+      const part = parts[index];
+      const from = source.getBoundingClientRect();
+      const to = part.firstElementChild.getBoundingClientRect();
+      const left = from.x + from.width / 2;
+      const top = from.y + from.height / 2;
+      const x = to.x + to.width / 2 - left;
+      const y = to.y + to.height / 2 - top;
+      const arrival = 'translate(-50%, -50%) translate(' + x + 'px, ' + y + 'px) scale(.65)';
+      const token = document.createElement('span');
+      token.className = 'classification-token ' + part.className;
+      token.setAttribute('aria-hidden', 'true');
+      token.style.left = left - bounds.x + 'px';
+      token.style.top = top - bounds.y + 'px';
+      token.style.fontSize = getComputedStyle(source).fontSize;
+      token.textContent = source.textContent;
+      result.append(token);
+
+      const start = delay + index * 620;
+      const animation = animate(token, [
+        { opacity: 0, transform: 'translate(-50%, -50%)' },
+        { opacity: 1, transform: 'translate(-50%, -50%) scale(1.1)', offset: .13 },
+        { opacity: 1, transform: arrival, offset: .83 },
+        { opacity: 0, transform: arrival }
+      ], { duration: 560, delay: start, easing: 'ease-in-out', fill: 'backwards' });
+      const remove = () => token.remove();
+      animation.finished.then(remove, remove);
+      animate(part, [{ opacity: 0 }, { opacity: 1 }],
+        { duration: 230, delay: start + 450, fill: 'backwards' });
+    });
+  }
+
+  function displayCount(visible) {
+    count.textContent = visible ? terms.length : '—';
+    count.classList.toggle('unknown', !visible);
+    countReason.textContent = visible ? '有 ' + terms.length + ' 個單項式' : '';
+    countReason.hidden = !visible;
+  }
+
+  function showPolynomialRule() {
+    const emphasis = document.createElement('strong');
+    emphasis.className = 'rule-emphasis';
+    emphasis.textContent = '多項式';
+    id('stage-hint').replaceChildren(polynomialRule.slice(0, -emphasis.textContent.length), emphasis);
+  }
+
+  function finishAssembly(tiles) {
+    const before = tiles.map(tile => tile.getBoundingClientRect());
+    cancelEffects();
+    board.removeAttribute('data-building');
+    board.setAttribute('data-settling', '');
+    polynomialVariables.hidden = false;
+    if (!isPractice || counted) {
+      showPolynomialRule();
+      id('announce').textContent = polynomialRule;
+    }
+    tiles.forEach((tile, index) => slideTile(tile, before[index], 0, 420));
+    updateControls();
+    if (reducedMotion.matches) prepareCount();
+    else assemblyTimer = setTimeout(prepareCount, 440);
+  }
+
+  function prepareCount() {
+    board.removeAttribute('data-settling');
+    board.toggleAttribute('data-await-count', !isPractice || !counted);
+    if (isPractice && counted) showCountAnswer();
+    if (isPractice && !counted) {
+      id('stage-hint').textContent = '有多少項？';
+      id('announce').textContent = '有多少個單項式？';
+    }
+    updatePractice([...list.children]);
+    updateControls();
+  }
+
+  function showCountAnswer() {
+    list.querySelectorAll('.term-index').forEach(badge => { badge.hidden = false; });
+    finishCounting();
+  }
+
+  function continueCount() {
+    if (isPractice || !board.hasAttribute('data-await-count')) return false;
+    board.removeAttribute('data-await-count');
+    updateControls();
+    if (reducedMotion.matches) {
+      showCountAnswer();
+    } else {
+      countTerm([...list.querySelectorAll('.tile')], [...list.querySelectorAll('.term-index')], 0);
+    }
+    return true;
+  }
+
+  function countTerm(tiles, badges, index) {
+    const badge = badges[index];
+    badge.hidden = false;
+    count.textContent = index + 1;
+    count.classList.remove('unknown');
+    animate(badge, [{ opacity: 0, transform: 'translateY(4px)' }, { opacity: 1, transform: 'none' }],
+      { duration: 190 });
+    animate(tiles[index], [{ transform: 'scale(1)' }, { transform: 'scale(1.045)', offset: .45 },
+      { transform: 'scale(1)' }], { duration: 255 });
+    if (index + 1 < tiles.length) {
+      countTimer = setTimeout(() => countTerm(tiles, badges, index + 1), 230);
+    } else {
+      finishCounting();
+    }
+  }
+
+  function finishCounting() {
+    displayCount(true);
+    animate(countReason, [{ opacity: 0 }, { opacity: 1 }], { duration: 250 });
+    id('announce').textContent = polynomialRule + '。有 ' + terms.length + ' 個單項式，項數是 ' + terms.length;
+  }
+
+  function render(destination, introduce = false, justAnswered = false) {
+    clearTimeout(assemblyTimer);
+    clearTimeout(countTimer);
+    const previous = step;
+    const groups = [...list.children];
+    const tiles = groups.map(group => group.querySelector('.tile'));
+    const before = tiles.map(tile => tile.getBoundingClientRect());
+    const pointerBefore = pointer.isConnected ? pointer.getBoundingClientRect() : null;
+    cancelEffects();
+    step = destination;
+    const showCount = step >= 1;
+    const building = step === 1;
+    const showDegree = step === 3;
+    const finished = answered === terms.length;
+    const practicing = isPractice && step === 2;
+    const maxDegree = Math.max(...terms.map(term => term.degree));
+    board.dataset.step = step;
+    board.toggleAttribute('data-building', building);
+    board.removeAttribute('data-settling');
+    board.removeAttribute('data-await-count');
+    board.toggleAttribute('data-show-polynomial', showCount);
+    board.toggleAttribute('data-show-degrees', step >= 2);
+    list.setAttribute('aria-label', step === 0 ? '單項式' : '多項式各項，按算式次序');
+    polynomialVariables.hidden = step < 2;
+    id('stage-hint').textContent = selection === 0 && step === 0 ? '以下都是單項式' : stages[step][1];
+    showCoefficientIntro();
+    groups.forEach((group, index) => {
+      group.querySelector('.term-index').hidden = true;
+      group.classList.toggle('highest', showDegree && terms[index].degree === maxDegree);
+      group.classList.toggle('answered', isPractice && index < answered);
+      group.classList.toggle('question', practicing && !finished && index === answered);
+    });
+    updatePractice(groups, pointerBefore);
+
+    displayCount(showCount && !building);
+    degree.textContent = showDegree ? maxDegree : '—';
+    degree.classList.toggle('unknown', !showDegree);
+    degreeReason.textContent = showDegree ? '最高次數是 ' + maxDegree : '';
+    degreeReason.hidden = !showDegree;
+    classification.firstElementChild.firstElementChild.textContent = chinese[maxDegree];
+    classification.lastElementChild.firstElementChild.textContent = chinese[terms.length];
+    classification.hidden = !showDegree;
+    id('announce').textContent = [
+      stages[step][0],
+      building ? '把帶有正負號的單項式相加' : showCount ? '有 ' + terms.length + ' 個單項式' : '',
+      step >= 2 && (!isPractice || finished) ? '各項次數為 ' + terms.map(term => term.degree).join('、') : '',
+      practicing && !finished ? '第 ' + (answered + 1) + ' 項的次數' : '',
+      showDegree ? '最高次數是 ' + maxDegree + '，' + classification.textContent : ''
+    ].filter(Boolean).join('。');
+
+    stepButtons.forEach((button, index) => {
+      if (index === step) button.setAttribute('aria-current', 'step');
+      else button.removeAttribute('aria-current');
+    });
+    updateControls();
+    if (!isPractice && step === 2 && previous !== 2) playDegreeDemo(groups, previous === 0 ? 970 : 150);
+
+    tiles.forEach((tile, index) => {
+      if (introduce) {
+        animate(tile, [{ opacity: 0, transform: 'translateY(-9px)' }, { opacity: 1, transform: 'none' }],
+          { duration: 310, delay: index * 120, fill: 'backwards' });
+        const kind = groups[index].querySelector('.kind');
+        if (kind) animate(kind, [{ opacity: 0 }, { opacity: 1 }],
+          { duration: 220, delay: 140 + index * 120, fill: 'backwards' });
+      } else if (previous === 0 || step <= 1) {
+        slideTile(tile, before[index], index * 115);
+      }
+      const joiner = groups[index].querySelector('.joiner');
+      if (step >= 1 && previous === 0 && joiner) {
+        animate(joiner, [{ opacity: 0 }, { opacity: 1 }],
+          { duration: 210, delay: 440 + index * 115, fill: 'backwards' });
+      }
+      if (step >= 2 && justAnswered && index === answered - 1) {
+        animate(groups[index].querySelector('.degree'),
+          [{ opacity: 0, transform: 'translateY(-5px)' }, { opacity: 1, transform: 'none' }],
+          { duration: 310, fill: 'backwards' });
+      }
+      if (showDegree && previous !== 3 && terms[index].degree === maxDegree) {
+        animate(groups[index].querySelector('.degree-number'),
+          [{ transform: 'scale(1)' }, { transform: 'scale(1.16)', offset: .55 }, { transform: 'scale(1)' }],
+          { duration: 560, delay: previous < 2 ? 1450 : 70 });
+      }
+    });
+    if (showDegree && previous !== 3) {
+      animate(degree.parentElement, [{ opacity: 0 }, { opacity: 1 }],
+        { duration: 350, delay: previous < 2 ? 1520 : 390, fill: 'backwards' });
+      playClassification(previous < 2 ? 1990 : 820);
+    }
+  }
+
+  function updatePractice(groups, pointerBefore) {
+    const askingCount = isPractice && board.hasAttribute('data-await-count');
+    const askingDegrees = isPractice && step === 2;
+    const finished = answered === terms.length;
+    practicePanel.hidden = !askingCount && !askingDegrees;
+    practiceProgress.hidden = !askingDegrees || finished;
+    reveal.hidden = !askingCount && (!askingDegrees || finished);
+    feedback.hidden = !askingDegrees || !finished;
+    const label = askingCount ? '顯示項數' : '顯示第 ' + (answered + 1) + ' 項的次數';
+    reveal.setAttribute('aria-label', label);
+    reveal.title = label;
+    if (!askingDegrees || finished) {
+      pointer.remove();
+      return;
+    }
+    groups[answered].prepend(pointer);
+    practiceProgress.textContent = answered + ' / ' + terms.length;
+    if (pointerBefore) {
+      const after = pointer.getBoundingClientRect();
+      const shift = pointerBefore.x - after.x;
+      if (shift) animate(pointer, [{ transform: 'translateX(' + shift + 'px)' }, { transform: 'none' }], { duration: 230 });
+    }
+  }
+
+  function updateControls() {
+    const adding = board.hasAttribute('data-building');
+    const waitingToCount = board.hasAttribute('data-await-count');
+    const waiting = adding || waitingToCount;
+    const finished = answered === terms.length;
+    const icon = running ? 'pause' : step === 3 ? 'replay' : 'play';
+    const label = running ? '暫停' : step === 3 ? '重播' : waiting ? '繼續播放' : '自動播放';
+    playIcon.className = 'icon icon--' + icon;
+    play.setAttribute('aria-label', label);
+    play.title = label;
+    const nextLabel = adding ? '去括號' : waitingToCount ? '數項' : '下一步';
+    next.setAttribute('aria-label', nextLabel);
+    next.title = nextLabel;
+    back.disabled = step === 0;
+    next.disabled = step === stages.length - 1 ||
+      (isPractice && ((step === 1 && !adding && !counted) || (step === 2 && !finished)));
+    stepButtons[2].disabled = isPractice && !counted;
+    stepButtons[3].disabled = isPractice && (!counted || !finished);
+  }
+
+  function stop() {
+    clearTimeout(timer);
+    running = false;
+    updateControls();
+  }
+
+  function go(destination) {
+    stop();
+    render(destination);
+  }
+
+  function schedule() {
+    timer = setTimeout(() => {
+      render(step + 1);
+      if (board.hasAttribute('data-building') || step === stages.length - 1) stop();
+      else schedule();
+    }, durations[step]);
+  }
+
+  function continueAssembly() {
+    if (!board.hasAttribute('data-building')) return false;
+    finishAssembly([...list.querySelectorAll('.tile')]);
+    return true;
+  }
+
+  play.addEventListener('click', () => {
+    if (running) {
+      stop();
+      return;
+    }
+    if (board.hasAttribute('data-settling') || continueAssembly()) return;
+    if (step === stages.length - 1) render(0, true);
+    continueCount();
+    running = true;
+    updateControls();
+    schedule();
+  });
+  id('reset').addEventListener('click', () => {
+    if (isPractice) loadExample(selection);
+    else {
+      showingCoefficients = false;
+      go(0);
+    }
+  });
+  back.addEventListener('click', () => go(step - 1));
+  next.addEventListener('click', () => {
+    if (board.hasAttribute('data-settling') || continueAssembly() || continueCount()) return;
+    go(step + 1);
+  });
+  stepButtons.forEach(button => button.addEventListener('click', () => go(Number(button.dataset.go))));
+  exampleButtons.forEach(button => button.addEventListener('click', () => {
+    const index = Number(button.dataset.example);
+    if (index !== selection || workedSelection !== -1) loadExample(index);
+  }));
+  solveButtons.forEach(button => button.addEventListener('click', () => loadWorked(Number(button.dataset.solve))));
+  solveStepButtons.forEach(button => button.addEventListener('click', () => renderWorked(Number(button.dataset.solveStep))));
+  id('solve-reset').addEventListener('click', () => renderWorked(0));
+  id('solve-prev').addEventListener('click', () => renderWorked(workedStep - 1));
+  id('solve-next').addEventListener('click', () => renderWorked(workedStep + 1));
+  coefficientToggle.addEventListener('click', () => {
+    showingCoefficients = !showingCoefficients;
+    showCoefficientIntro();
+    if (showingCoefficients) list.querySelectorAll('.coefficient-part').forEach((part, index) =>
+      animate(part, [{ opacity: .28 }, { opacity: 1 }], { duration: 240, delay: index * 85, fill: 'backwards' }));
+  });
+  reveal.addEventListener('click', () => {
+    if (!isPractice || practicePanel.hidden || reveal.hidden) return;
+    if (board.hasAttribute('data-await-count')) {
+      counted = true;
+      board.removeAttribute('data-await-count');
+      showPolynomialRule();
+      showCountAnswer();
+      updatePractice([...list.children]);
+      updateControls();
+      next.focus();
+      return;
+    }
+    answered += 1;
+    render(2, false, true);
+    if (answered === terms.length) next.focus();
+  });
+  loadExample(0);
+</script>
+</body>
+</html>
