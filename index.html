@@ -258,6 +258,10 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   .solve-expression { gap: 4px; min-height: 78px; }
   .solve-method { gap: 5px; }
 }
+@container (max-width: 500px) {
+  [data-building] .term-list[data-dense] { --plus-gap: clamp(9px, 3cqw, 14px); }
+  [data-building] .term-list[data-dense] .tile { min-width: clamp(34px, 12cqw, 64px); padding-inline: clamp(2px, .7cqw, 4px); }
+}
 @media (max-width: 480px) {
   .solve-method { grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .solve-constraint { padding: 10px 12px; }
@@ -266,13 +270,16 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   .term-list[data-dense] .tile, [data-step="0"] .term-list[data-dense] .tile { min-width: clamp(36px, 11vw, 52px); padding-inline: 3px; font-size: clamp(1rem, 4.55vw, 1.35rem); }
   [data-show-polynomial]:not([data-building]) .term-list[data-dense] .term-group:has(.signed-joiner) { margin-inline-start: 4px; }
   .term-list[data-dense] .degree-detail.math { font-size: .875rem; }
-  [data-building] .term-list { --plus-gap: 9px; }
-  [data-building] .term-list .tile { min-width: 34px; padding-inline: 2px; font-size: clamp(.9375rem, 4.5vw, 1.25rem); }
+  [data-building] .term-list, [data-building] .term-list[data-dense] { --plus-gap: 9px; }
+  [data-building] .term-list .tile, [data-building] .term-list[data-dense] .tile { min-width: 34px; padding-inline: 2px; font-size: clamp(.9375rem, 4.5vw, 1.25rem); }
 }
 @media (max-width: 355px) {
   .examples button { font-size: .8125rem; }
   .steps button { font-size: .8125rem; padding-inline: 1px; }
   [data-step="0"] .term-list { gap: 8px; }
+}
+@supports (text-transform: math-auto) {
+  :is(.tile, .polynomial-variables, .solve-board) var { font-style: normal; text-transform: math-auto; }
 }
 </style>
 </head>
@@ -581,8 +588,12 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   }
 
   function mathMarkup(text) {
-    return text.replace(/([a-z])(?:\^([a-z0-9]))?/g, (_, letter, exponent) =>
-      '<var>' + letter + '</var>' + (exponent === undefined ? '' : '<sup>' + exponent + '</sup>'));
+    return text.replace(/([a-z])(?:\^([a-z0-9]))?/g, (_, letter, exponent) => {
+      const variable = '<var>' + letter + '</var>';
+      if (exponent === undefined) return variable;
+      const power = /[a-z]/.test(exponent) ? '<var>' + exponent + '</var>' : exponent;
+      return variable + '<sup>' + power + '</sup>';
+    });
   }
 
   function showCoefficientIntro() {
