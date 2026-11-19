@@ -311,15 +311,15 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
 .classification-token { position: absolute; z-index: 2; pointer-events: none; font: 700 1rem/1 var(--math); }
 .practice { min-height: 56px; display: flex; align-items: center; justify-content: center; gap: 8px; }
 .practice button { display: grid; place-items: center; width: 50px; padding: 0; background: var(--blue); color: white; }
-.practice button:hover { background: #173d79; }
+.practice button:hover:not([aria-disabled="true"]) { background: #173d79; }
+.practice button[aria-disabled="true"] { opacity: .55; cursor: default; }
 .practice-progress { min-width: 3.2em; color: var(--muted); font: 600 .875rem var(--math); }
 .feedback { color: #206448; font-size: .875rem; font-weight: 700; }
 .controls { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; padding: 16px 10px; border-top: 1px solid var(--line); }
 .controls button { display: grid; place-items: center; width: 48px; padding: 0; }
 #play { width: 60px; border-color: var(--ink); background: var(--ink); color: white; }
 #play:hover { background: var(--blue); }
-.panel:has([data-building], [data-await-count], [data-await-degree]) #next:not(:disabled) { border-color: var(--blue); background: #eaf2ff; color: var(--blue); }
-.controls button[aria-disabled="true"] { opacity: .55; cursor: default; }
+.panel:has([data-building], [data-await-count]) #next:not(:disabled) { border-color: var(--blue); background: #eaf2ff; color: var(--blue); }
 .degree-step-hint { flex: 0 0 100%; text-align: center; color: var(--muted); font-size: .875rem; }
 .icon { width: 22px; height: 22px; position: relative; }
 .icon::before, .icon::after { content: ""; position: absolute; }
@@ -462,7 +462,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
       <p id="classification" class="classification" hidden><span class="classification-degree"><span></span>次</span><span class="classification-count"><span></span>項式</span></p>
     </div>
     <div class="controls" role="group" aria-label="播放控制">
-      <p id="degree-step-hint" class="degree-step-hint" hidden>每按一次下一步，顯示一項次數。</p>
+      <p id="degree-step-hint" class="degree-step-hint" hidden></p>
       <button type="button" id="reset" aria-label="重設" title="重設"><span class="icon icon--reset" aria-hidden="true"></span></button>
       <button type="button" id="prev" aria-label="上一步" title="上一步" disabled><span class="icon icon--step icon--previous" aria-hidden="true"></span></button>
       <button type="button" id="play" aria-label="自動播放" title="自動播放"><span class="icon icon--play" aria-hidden="true"></span></button>
@@ -909,26 +909,28 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     return appear(group.querySelector('.degree-number'), answerDelay);
   }
 
-  function continueDegreeDemo() {
-    if (isPractice || step !== 2) return false;
-    if (degreeAnimation) return true;
-    if (answered === terms.length) return false;
+  function revealDemoDegree() {
+    if (degreeAnimation || answered === terms.length) return;
 
     const groups = [...list.children];
     const current = groups[answered];
     current.classList.add('answered');
     answered += 1;
     const finish = () => {
+      const hadFocus = document.activeElement === reveal;
       const pointerBefore = pointer.getBoundingClientRect();
       degreeAnimation = undefined;
       updateDegreePointer(groups, pointerBefore);
+      updateRevealPanel();
       updateControls();
+      if (hadFocus && reveal.hidden) next.focus();
       id('announce').textContent = '第 ' + answered + ' 項的次數是 ' + terms[answered - 1].degree +
-        (answered < terms.length ? '。按下一步顯示下一項的次數。' : '。各項次數已顯示。');
+        (answered < terms.length ? '。按眼睛顯示下一項的次數。' : '。各項次數已顯示。');
     };
     const animation = playDegreeDemo(current);
     if (animation) {
       degreeAnimation = animation;
+      updateRevealPanel();
       updateControls();
       animation.finished.then(() => {
         if (degreeAnimation === animation) finish();
@@ -936,6 +938,12 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     } else {
       finish();
     }
+  }
+
+  function completeDegreeDemo() {
+    if (isPractice || step !== 2 || (answered === terms.length && !degreeAnimation)) return false;
+    answered = terms.length;
+    render(2);
     return true;
   }
 
@@ -1019,7 +1027,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
       id('stage-hint').textContent = '有多少項？';
       id('announce').textContent = '有多少個單項式？';
     }
-    updatePractice();
+    updateRevealPanel();
     updateControls();
   }
 
@@ -1100,7 +1108,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
       group.classList.toggle('answered', index < answered);
     });
     updateDegreePointer(groups, pointerBefore);
-    updatePractice();
+    updateRevealPanel();
 
     displayCount(showCount && !building);
     degree.textContent = showDegree ? maxDegree : '—';
@@ -1157,18 +1165,21 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     }
   }
 
-  function updatePractice() {
+  function updateRevealPanel() {
     const askingCount = isPractice && board.hasAttribute('data-await-count');
-    const askingDegrees = isPractice && step === 2;
-    const finished = answered === terms.length;
-    practicePanel.hidden = !askingCount && !askingDegrees;
-    practiceProgress.hidden = !askingDegrees || finished;
-    reveal.hidden = !askingCount && (!askingDegrees || finished);
-    feedback.hidden = !askingDegrees || !finished;
-    const label = askingCount ? '顯示項數' : '顯示第 ' + (answered + 1) + ' 項的次數';
+    const showingDegrees = step === 2;
+    const shown = answered - Number(Boolean(degreeAnimation));
+    const canRevealDegree = showingDegrees && shown < terms.length;
+    const practiceComplete = isPractice && showingDegrees && !canRevealDegree;
+    practicePanel.hidden = !askingCount && !canRevealDegree && !practiceComplete;
+    practiceProgress.hidden = !canRevealDegree;
+    reveal.hidden = !askingCount && !canRevealDegree;
+    feedback.hidden = !practiceComplete;
+    const label = askingCount ? '顯示項數' : degreeAnimation ? '正在顯示次數' : '顯示第 ' + (shown + 1) + ' 項的次數';
     reveal.setAttribute('aria-label', label);
+    reveal.setAttribute('aria-disabled', Boolean(degreeAnimation));
     reveal.title = label;
-    practiceProgress.textContent = answered + ' / ' + terms.length;
+    practiceProgress.textContent = shown + ' / ' + terms.length;
   }
 
   function updateDegreePointer(groups, pointerBefore) {
@@ -1192,28 +1203,26 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     const waiting = adding || waitingToCount;
     const finished = answered === terms.length;
     const demoDegrees = !isPractice && step === 2;
-    const waitingForDegree = demoDegrees && !finished && !degreeAnimation;
+    const canShowAllDegrees = demoDegrees && (!finished || Boolean(degreeAnimation));
     play.hidden = isPractice || demoDegrees;
     degreeStepHint.hidden = !demoDegrees;
-    degreeStepHint.textContent = finished && !degreeAnimation
-      ? '按下一步找最高次數。' : '每按一次下一步，顯示一項次數。';
-    board.toggleAttribute('data-await-degree', waitingForDegree);
+    degreeStepHint.textContent = canShowAllDegrees
+      ? '按眼睛逐項顯示。按下一步可顯示全部。' : '按下一步找最高次數。';
     const icon = running ? 'pause' : step === 3 ? 'replay' : 'play';
     const label = running ? '暫停' : step === 3 ? '重播' : waiting ? '繼續播放' : '自動播放';
     playIcon.className = 'icon icon--' + icon;
     play.setAttribute('aria-label', label);
     play.title = label;
     const nextLabel = adding ? '去括號' : waitingToCount ? '數項' :
-      degreeAnimation ? '正在顯示次數' : waitingForDegree ? '顯示這一項的次數' : '下一步';
+      canShowAllDegrees ? '顯示全部次數' : '下一步';
     next.setAttribute('aria-label', nextLabel);
-    next.setAttribute('aria-disabled', Boolean(degreeAnimation));
     next.title = nextLabel;
     back.disabled = step === 0;
     next.disabled = step === stages.length - 1 ||
       (isPractice && ((step === 1 && !adding && !counted) || (step === 2 && !finished)));
     stepButtons[2].disabled = isPractice && !counted;
     stepButtons[3].disabled = (isPractice && (!counted || !finished)) ||
-      (demoDegrees && (!finished || Boolean(degreeAnimation)));
+      canShowAllDegrees;
   }
 
   function stop() {
@@ -1263,7 +1272,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   });
   back.addEventListener('click', () => go(step - 1));
   next.addEventListener('click', () => {
-    if (board.hasAttribute('data-settling') || continueAssembly() || continueCount() || continueDegreeDemo()) return;
+    if (board.hasAttribute('data-settling') || continueAssembly() || continueCount() || completeDegreeDemo()) return;
     go(step + 1);
   });
   stepButtons.forEach(button => button.addEventListener('click', () => go(Number(button.dataset.go))));
@@ -1283,13 +1292,17 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
       animate(part, [{ opacity: .28 }, { opacity: 1 }], { duration: 240, delay: index * 85, fill: 'backwards' }));
   });
   reveal.addEventListener('click', () => {
-    if (!isPractice || practicePanel.hidden || reveal.hidden) return;
+    if (practicePanel.hidden || reveal.hidden) return;
+    if (!isPractice) {
+      revealDemoDegree();
+      return;
+    }
     if (board.hasAttribute('data-await-count')) {
       counted = true;
       board.removeAttribute('data-await-count');
       showPolynomialRule();
       showCountAnswer();
-      updatePractice();
+      updateRevealPanel();
       updateControls();
       next.focus();
       return;
