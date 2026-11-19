@@ -312,7 +312,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
 .practice { min-height: 56px; display: flex; align-items: center; justify-content: center; gap: 8px; }
 .practice button { display: grid; place-items: center; width: 50px; padding: 0; background: var(--blue); color: white; }
 .practice button:hover:not([aria-disabled="true"]) { background: #173d79; }
-.practice button[aria-disabled="true"] { opacity: .55; cursor: default; }
+.practice button[aria-disabled="true"], .controls button[aria-disabled="true"] { opacity: .55; cursor: default; }
 .practice-progress { min-width: 3.2em; color: var(--muted); font: 600 .875rem var(--math); }
 .feedback { color: #206448; font-size: .875rem; font-weight: 700; }
 .controls { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; padding: 16px 10px; border-top: 1px solid var(--line); }
@@ -640,6 +640,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   let assemblyTimer;
   let countTimer;
   let degreeAnimation;
+  let playingAllDegrees = false;
   let running = false;
   let effects = [];
 
@@ -720,6 +721,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
 
   function cancelEffects() {
     degreeAnimation = undefined;
+    playingAllDegrees = false;
     effects.forEach(effect => effect.cancel());
     effects = [];
   }
@@ -921,11 +923,17 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
       const pointerBefore = pointer.getBoundingClientRect();
       degreeAnimation = undefined;
       updateDegreePointer(groups, pointerBefore);
+      const finished = answered === terms.length;
+      const reminder = finished ? '。各項次數已顯示。' : playingAllDegrees ? '。' : '。按眼睛顯示下一項的次數。';
+      id('announce').textContent = '第 ' + answered + ' 項的次數是 ' + terms[answered - 1].degree + reminder;
+      if (playingAllDegrees && !finished) {
+        revealDemoDegree();
+        return;
+      }
+      playingAllDegrees = false;
       updateRevealPanel();
       updateControls();
       if (hadFocus && reveal.hidden) next.focus();
-      id('announce').textContent = '第 ' + answered + ' 項的次數是 ' + terms[answered - 1].degree +
-        (answered < terms.length ? '。按眼睛顯示下一項的次數。' : '。各項次數已顯示。');
     };
     const animation = playDegreeDemo(current);
     if (animation) {
@@ -940,10 +948,13 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     }
   }
 
-  function completeDegreeDemo() {
+  function playAllDegrees() {
     if (isPractice || step !== 2 || (answered === terms.length && !degreeAnimation)) return false;
-    answered = terms.length;
+    if (playingAllDegrees) return true;
+    answered = 0;
     render(2);
+    playingAllDegrees = true;
+    revealDemoDegree();
     return true;
   }
 
@@ -1205,17 +1216,17 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     const demoDegrees = !isPractice && step === 2;
     const canShowAllDegrees = demoDegrees && (!finished || Boolean(degreeAnimation));
     play.hidden = isPractice || demoDegrees;
-    degreeStepHint.hidden = !demoDegrees;
-    degreeStepHint.textContent = canShowAllDegrees
-      ? '按眼睛逐項顯示。按下一步可顯示全部。' : '按下一步找最高次數。';
+    degreeStepHint.hidden = !demoDegrees || canShowAllDegrees;
+    degreeStepHint.textContent = degreeStepHint.hidden ? '' : '按下一步找最高次數。';
     const icon = running ? 'pause' : step === 3 ? 'replay' : 'play';
     const label = running ? '暫停' : step === 3 ? '重播' : waiting ? '繼續播放' : '自動播放';
     playIcon.className = 'icon icon--' + icon;
     play.setAttribute('aria-label', label);
     play.title = label;
     const nextLabel = adding ? '去括號' : waitingToCount ? '數項' :
-      canShowAllDegrees ? '顯示全部次數' : '下一步';
+      playingAllDegrees ? '正在播放各項次數' : canShowAllDegrees ? '播放全部次數動畫' : '下一步';
     next.setAttribute('aria-label', nextLabel);
+    next.setAttribute('aria-disabled', playingAllDegrees);
     next.title = nextLabel;
     back.disabled = step === 0;
     next.disabled = step === stages.length - 1 ||
@@ -1272,7 +1283,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   });
   back.addEventListener('click', () => go(step - 1));
   next.addEventListener('click', () => {
-    if (board.hasAttribute('data-settling') || continueAssembly() || continueCount() || completeDegreeDemo()) return;
+    if (board.hasAttribute('data-settling') || continueAssembly() || continueCount() || playAllDegrees()) return;
     go(step + 1);
   });
   stepButtons.forEach(button => button.addEventListener('click', () => go(Number(button.dataset.go))));
