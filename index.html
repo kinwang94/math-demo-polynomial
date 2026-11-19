@@ -951,10 +951,9 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   function playAllDegrees() {
     if (isPractice || step !== 2 || (answered === terms.length && !degreeAnimation)) return false;
     if (playingAllDegrees) return true;
-    answered = 0;
-    render(2);
     playingAllDegrees = true;
-    revealDemoDegree();
+    if (degreeAnimation) updateControls();
+    else revealDemoDegree();
     return true;
   }
 
@@ -1223,8 +1222,9 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     playIcon.className = 'icon icon--' + icon;
     play.setAttribute('aria-label', label);
     play.title = label;
+    const degreePlaybackLabel = answered > 0 ? '繼續播放各項次數' : '播放全部次數動畫';
     const nextLabel = adding ? '去括號' : waitingToCount ? '數項' :
-      playingAllDegrees ? '正在播放各項次數' : canShowAllDegrees ? '播放全部次數動畫' : '下一步';
+      playingAllDegrees ? '正在播放各項次數' : canShowAllDegrees ? degreePlaybackLabel : '下一步';
     next.setAttribute('aria-label', nextLabel);
     next.setAttribute('aria-disabled', playingAllDegrees);
     next.title = nextLabel;
