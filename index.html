@@ -188,6 +188,15 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   width: 100%; display: flex; align-items: flex-start; justify-content: center;
   position: relative; z-index: 1; padding-top: 12px;
 }
+.term-list[data-whole-polynomial] { width: max-content; }
+.term-list[data-whole-polynomial]::after {
+  content: "";
+  position: absolute;
+  inset: 8px -9px -7px;
+  border: 2px solid var(--blue);
+  border-radius: 12px;
+  pointer-events: none;
+}
 [data-step="0"] .term-list { padding-top: 0; gap: clamp(7px, 3.9cqw, 42px); }
 [data-step="0"] .term-list[data-dense] { gap: clamp(5px, 2.3cqw, 26px); }
 .term-group {
@@ -925,6 +934,8 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     emphasis.className = 'rule-emphasis';
     emphasis.textContent = '多項式';
     id('stage-hint').replaceChildren(polynomialRule.slice(0, -emphasis.textContent.length), emphasis);
+    list.toggleAttribute('data-whole-polynomial', selection === 0);
+    id('announce').textContent = polynomialRule;
   }
 
   function finishAssembly(tiles) {
@@ -933,9 +944,8 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     board.removeAttribute('data-building');
     board.setAttribute('data-settling', '');
     polynomialVariables.hidden = false;
-    if (!isPractice || counted) {
+    if (selection !== 0 && (!isPractice || counted)) {
       showPolynomialRule();
-      id('announce').textContent = polynomialRule;
     }
     tiles.forEach((tile, index) => slideTile(tile, before[index], 0, 420));
     updateControls();
@@ -946,6 +956,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   function prepareCount() {
     board.removeAttribute('data-settling');
     board.toggleAttribute('data-await-count', !isPractice || !counted);
+    if (selection === 0) showPolynomialRule();
     if (isPractice && counted) showCountAnswer();
     if (isPractice && !counted) {
       id('stage-hint').textContent = '有多少項？';
@@ -1014,6 +1025,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     board.toggleAttribute('data-building', building);
     board.removeAttribute('data-settling');
     board.removeAttribute('data-await-count');
+    list.removeAttribute('data-whole-polynomial');
     board.toggleAttribute('data-show-polynomial', showCount);
     board.toggleAttribute('data-show-degrees', step >= 2);
     list.setAttribute('aria-label', step === 0 ? '單項式' : '多項式各項，按算式次序');
