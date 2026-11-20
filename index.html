@@ -156,8 +156,18 @@ button:disabled { cursor: default; color: #586b82; background: #f4f7fb; }
 button:hover:not(:disabled) { border-color: var(--blue); background-color: #eff5ff; }
 button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
 .examples { display: grid; gap: 6px; }
+.topic-label { grid-column: 1 / -1; color: var(--muted); font-size: .8125rem; font-weight: 700; }
+.topic-divider { margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
 .examples button { padding: 0 4px; white-space: nowrap; }
 .examples button[aria-pressed="true"] { border-color: var(--blue); background: var(--blue); color: white; }
+@media (min-width: 621px) {
+  .examples { position: sticky; top: 12px; max-height: calc(100dvh - 64px); overflow-y: auto; padding: 3px; }
+  .examples button:focus-visible { outline-offset: -4px; }
+}
+@media (min-width: 1100px) {
+  main { grid-template-columns: 154px minmax(0, 1fr); }
+  .examples { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 .panel { overflow: hidden; background: var(--white); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 30px #284b7012; }
 .steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--line); }
 .steps button { border: 0; border-inline-end: 1px solid var(--line); border-radius: 0; min-height: 54px; padding: 5px 4px; }
@@ -364,6 +374,24 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
 .solve-hint { min-height: 1.5em; max-width: 740px; margin: 12px auto 0; color: var(--muted); font-size: .9375rem; text-wrap: pretty; }
 .solve-hint .math { font-size: 1.15em; }
 #solve-next:not(:disabled) { border-color: var(--blue); background: var(--blue); color: white; }
+.like-board { min-height: 300px; padding: 24px clamp(12px, 3vw, 32px); background: linear-gradient(#f8fbff, white 68%); text-align: center; }
+.like-cases { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-bottom: 14px; }
+.like-cases button { width: 44px; }
+.like-cases button[aria-current] { background: #eaf2ff; color: var(--blue); border-color: var(--blue); }
+.like-expression, .like-work { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; margin: 18px 0; }
+.like-expression { font: clamp(1.25rem, 3.8vw, 2.4rem)/1.5 var(--math); }
+.like-term { padding: 5px 12px; border: 1px solid var(--line); border-radius: 8px; background: white; white-space: nowrap; }
+.like-term sup, .like-formula sup { font-size: .65em; line-height: 0; }
+.like-a { --like-color: #204e92; --like-fill: #eaf2ff; --like-edge: #c0d5f6; }
+.like-b { --like-color: #604593; --like-fill: #f1ecfc; --like-edge: #dacef1; }
+.like-c { --like-color: #256344; --like-fill: #eaf5ee; --like-edge: #c2e3d2; }
+.like-mark { color: var(--like-color); background: var(--like-fill); border-color: var(--like-edge); }
+.like-readout { width: 100%; font: clamp(1.1rem, 3vw, 1.55rem)/1.6 var(--math); }
+.like-readout > span { display: inline-block; }
+.like-result { margin-top: 12px; color: var(--blue); font-weight: 700; }
+.like-unequal { color: #96354a; background: #fff0f1; border-color: #efc8d0; }
+.like-note { margin-top: 10px; color: var(--muted); font-size: .9rem; }
+#like-next:not(:disabled) { background: var(--blue); border-color: var(--blue); color: white; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (max-width: 620px) {
   main { grid-template-columns: minmax(0, 1fr); gap: 8px; width: calc(100% - 20px); padding: 12px 0; }
@@ -400,12 +428,12 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   .steps button { font-size: .8125rem; padding-inline: 1px; }
   [data-step="0"] .term-list { gap: 8px; }
 }
-.tile var, .polynomial-variables var, .solve-board var {
+.tile var, .polynomial-variables var, .solve-board var, .like-board var {
   font-family: "Polynomial Math Variables", var(--math);
   font-style: normal;
 }
 @supports (text-transform: math-auto) {
-  .tile var, .polynomial-variables var, .solve-board var {
+  .tile var, .polynomial-variables var, .solve-board var, .like-board var {
     font-family: "Cambria Math", "Polynomial Math Variables", var(--math);
     text-transform: math-auto;
   }
@@ -415,6 +443,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
 <body>
 <main>
   <nav class="examples" aria-label="選擇題目">
+    <p class="topic-label">多項式</p>
     <button type="button" data-example="0" aria-pressed="true">例 1</button>
     <button type="button" data-example="1" aria-pressed="false">例 2</button>
     <button type="button" data-example="2" aria-pressed="false">練習 1</button>
@@ -427,6 +456,14 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     <button type="button" data-solve="0" aria-pressed="false">例 3</button>
     <button type="button" data-solve="1" aria-pressed="false">例 4</button>
     <button type="button" data-solve="2" aria-pressed="false">例 5</button>
+    <p class="topic-label topic-divider">同類項</p>
+    <button type="button" data-like="0" aria-pressed="false" aria-label="同類項例 1">例 1</button>
+    <button type="button" data-like="1" aria-pressed="false" aria-label="同類項例 2">例 2</button>
+    <button type="button" data-like="2" aria-pressed="false" aria-label="同類項練習 1">練習 1</button>
+    <button type="button" data-like="3" aria-pressed="false" aria-label="同類項練習 2">練習 2</button>
+    <button type="button" data-like="4" aria-pressed="false" aria-label="同類項練習 3">練習 3</button>
+    <button type="button" data-like="5" aria-pressed="false" aria-label="同類項練習 4">練習 4</button>
+    <button type="button" data-like="6" aria-pressed="false" aria-label="同類項練習 5">練習 5</button>
   </nav>
   <section class="panel" id="demo-panel" aria-label="多項式動畫">
     <nav class="steps" aria-label="動畫步驟">
@@ -492,6 +529,21 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
       <button type="button" id="solve-reset" aria-label="重設" title="重設"><span class="icon icon--reset" aria-hidden="true"></span></button>
       <button type="button" id="solve-prev" aria-label="上一步" title="上一步"><span class="icon icon--step icon--previous" aria-hidden="true"></span></button>
       <button type="button" id="solve-next" aria-label="下一步" title="下一步"><span class="icon icon--step" aria-hidden="true"></span></button>
+    </div>
+  </section>
+  <section class="panel" id="like-panel" aria-label="同類項動畫" hidden>
+    <nav class="steps" id="like-steps" aria-label="同類項步驟"></nav>
+    <div class="like-board">
+      <nav class="like-cases" id="like-cases" aria-label="選擇比較組合" hidden></nav>
+      <p class="hint" id="like-hint"></p>
+      <div class="like-expression" id="like-expression"></div>
+      <div id="like-result" class="like-result" aria-live="polite"></div>
+      <p id="like-note" class="like-note"></p>
+    </div>
+    <div class="controls" role="group" aria-label="同類項動畫控制">
+      <button type="button" id="like-reset" aria-label="重設" title="重設"><span class="icon icon--reset" aria-hidden="true"></span></button>
+      <button type="button" id="like-prev" aria-label="上一步" title="上一步"><span class="icon icon--step icon--previous" aria-hidden="true"></span></button>
+      <button type="button" id="like-next" aria-label="下一步" title="下一步"><span class="icon icon--step" aria-hidden="true"></span></button>
     </div>
   </section>
   <noscript><p>請開啟 JavaScript 以播放動畫。</p></noscript>
@@ -596,6 +648,8 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   const id = name => document.getElementById(name);
   const demoPanel = id('demo-panel');
   const solvePanel = id('solve-panel');
+  const likePanel = id('like-panel');
+  const likeButtons = [...document.querySelectorAll('[data-like]')];
   const board = id('board');
   const list = id('terms');
   const count = id('term-count');
@@ -652,12 +706,14 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     showingCoefficients = false;
     demoPanel.hidden = false;
     solvePanel.hidden = true;
+    likePanel.hidden = true;
     isPractice = index >= examples.length;
     counted = false;
     answered = 0;
     board.toggleAttribute('data-practice', isPractice);
     exampleButtons.forEach((button, position) => button.setAttribute('aria-pressed', position === index));
     solveButtons.forEach(button => button.setAttribute('aria-pressed', false));
+    likeButtons.forEach(button => button.setAttribute('aria-pressed', false));
     const source = isPractice ? exercises[index - examples.length] : examples[index];
     terms = source.map(([coefficient, powers]) => {
       const variables = Object.entries(powers);
@@ -758,8 +814,10 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     workedSelection = index;
     demoPanel.hidden = true;
     solvePanel.hidden = false;
+    likePanel.hidden = true;
     exampleButtons.forEach(button => button.setAttribute('aria-pressed', false));
     solveButtons.forEach((button, position) => button.setAttribute('aria-pressed', position === index));
+    likeButtons.forEach(button => button.setAttribute('aria-pressed', false));
     renderWorked('problem');
   }
 
@@ -1289,7 +1347,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   stepButtons.forEach(button => button.addEventListener('click', () => go(Number(button.dataset.go))));
   exampleButtons.forEach(button => button.addEventListener('click', () => {
     const index = Number(button.dataset.example);
-    if (index !== selection || workedSelection !== -1) loadExample(index);
+    if (index !== selection || workedSelection !== -1 || !likePanel.hidden) loadExample(index);
   }));
   solveButtons.forEach(button => button.addEventListener('click', () => loadWorked(Number(button.dataset.solve))));
   solveStepButtons.forEach(button => button.addEventListener('click', () => renderWorked(button.dataset.solveStep)));
@@ -1321,6 +1379,224 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     answered += 1;
     render(2, false, true);
     if (answered === terms.length) next.focus();
+  });
+  const likeLessons = [
+    { pairs: [
+      [[4, { x: 2 }], [-7, { x: 2 }]],
+      [[-3, { b: 1, a: 2 }], [5, { a: 2, b: 1 }]],
+      [[5, { x: 1, y: 1 }], [5, { x: 1, z: 1 }]],
+      [[3, { p: 2, q: 1 }], [-3, { p: 1, q: 2 }]],
+      [[6, {}], [-9, {}]]
+    ] },
+    { terms: [[5, { x: 2, y: 1 }], [-8, { x: 2, y: 1 }], [2, { y: 1 }]] },
+    { pairs: [[[2, { u: 1, v: 2 }], [-6, { v: 2, u: 1 }]]] },
+    { pairs: [[[4, { a: 1, b: 1 }], [-4, { a: 1, c: 1 }]]] },
+    { pairs: [[[7, { x: 2, y: 1 }], [7, { x: 1, y: 2 }]]] },
+    { terms: [[2, { a: 1, b: 1 }], [4, { b: 2 }], [-5, { b: 1, a: 1 }], [3, { b: 2 }]] },
+    { terms: [[4, { m: 2 }], [-4, { m: 2 }], [6, {}], [-1, {}], [3, { m: 1 }]] }
+  ];
+  const likeSteps = id('like-steps');
+  const likeCases = id('like-cases');
+  const likeExpression = id('like-expression');
+  const likeResult = id('like-result');
+  const likeNext = id('like-next');
+  const likeColors = ['like-a', 'like-b', 'like-c'];
+  let likeSelection = 0;
+  let likeCase = 0;
+  let likeStep = 0;
+
+  function factorKey(factors, withExponents = true) {
+    return Object.keys(factors).sort().map(letter => withExponents ? letter + '^' + factors[letter] : letter).join('');
+  }
+
+  function factorFormula(factors, showOnes = false) {
+    return Object.entries(factors).map(([letter, power]) =>
+      letter + (power !== 1 || showOnes ? '^' + power : '')).join('');
+  }
+
+  function likeTermMarkup([coefficient, factors], joined = false, index = null) {
+    const sign = coefficient < 0 ? '−' : joined ? '+' : '';
+    const magnitude = Math.abs(coefficient);
+    const number = magnitude === 1 && Object.keys(factors).length ? '' : magnitude;
+    const source = index === null ? '' : ' data-coefficient-source="' + index + '"';
+    return '<span' + source + '>' + sign + number + '</span>' + mathMarkup(factorFormula(factors));
+  }
+
+  function likeTile(content, mark = '') {
+    return '<span class="like-term' + (mark ? ' like-mark ' + mark : '') + '">' + content + '</span>';
+  }
+
+  function renderComparison(pair) {
+    const factors = pair.map(([, letters]) => letters);
+    const sameLetters = factorKey(factors[0], false) === factorKey(factors[1], false);
+    const samePowers = factorKey(factors[0]) === factorKey(factors[1]);
+    const showLetters = likeStep === 1;
+    const note = id('like-note');
+    const hint = id('like-hint');
+    hint.textContent = ['這兩項是同類項嗎？', '比較所含的字母', '比較相同字母的指數', '判斷'][likeStep];
+    likeExpression.innerHTML = pair.map(term => likeTile(likeTermMarkup(term))).join('<span>與</span>');
+
+    if (likeStep === 1 || likeStep === 2) {
+      if (!showLetters && !sameLetters) {
+        note.textContent = '字母不同，已可判斷不是同類項。';
+        return;
+      }
+      const compare = factors.map(letters => showLetters ? Object.keys(letters).sort().join('、') :
+        factorFormula(Object.fromEntries(Object.entries(letters).sort()), true));
+      const match = showLetters ? sameLetters : samePowers;
+      likeResult.innerHTML = '<div class="like-work like-readout">' +
+        compare.map(value => likeTile(value ? mathMarkup(value) : '沒有字母', match ? 'like-a' : 'like-unequal')).join(
+          '<span>' + (match ? '=' : '≠') + '</span>') + '</div>';
+      note.textContent = showLetters ? (sameLetters ? '所含字母相同。' : '所含字母不同。') :
+        (samePowers ? '各字母的指數相同。' : '相同字母的指數不同。');
+      likeResult.querySelectorAll('.like-term').forEach((target, index) => {
+        const from = likeExpression.querySelectorAll('.like-term')[index].getBoundingClientRect();
+        const to = target.getBoundingClientRect();
+        const x = from.left + from.width / 2 - to.left - to.width / 2;
+        animate(target, [
+          { opacity: .1, transform: 'translate(' + x + 'px,' + (from.top - to.top) + 'px)' },
+          { opacity: 1, transform: 'none' }
+        ], { duration: 420, delay: index * 170, fill: 'backwards' });
+      });
+    }
+    if (likeStep === 3) {
+      likeExpression.innerHTML = pair.map(term =>
+        likeTile(likeTermMarkup(term), samePowers ? 'like-a' : 'like-unequal')).join('<span>與</span>');
+      likeResult.textContent = samePowers ? '是同類項' : '不是同類項';
+      note.textContent = !sameLetters ? '所含字母不同。' : !samePowers ? '相同字母的指數不同。' :
+        !Object.keys(factors[0]).length ? '兩項都是常數。' : '所含字母和各字母的指數都相同，字母次序和係數不影響判斷。';
+    }
+  }
+
+  function renderCombination(terms) {
+    const groups = new Map();
+    terms.forEach(([coefficient, factors], index) => {
+      const key = factorKey(factors);
+      if (!groups.has(key)) groups.set(key, { factors, indices: [], coefficient: 0 });
+      const group = groups.get(key);
+      group.indices.push(index);
+      group.coefficient += coefficient;
+    });
+    const combined = [...groups.values()].filter(group => group.indices.length > 1);
+    const colors = new Map();
+    combined.forEach((group, index) => group.indices.forEach(termIndex => colors.set(termIndex, likeColors[index])));
+    const hint = id('like-hint');
+    const note = id('like-note');
+    hint.textContent = ['合併下式的同類項', '找出同類項', '把同類項的係數相加', '化簡結果'][likeStep];
+    likeExpression.innerHTML = terms.map((term, index) =>
+      likeTile(likeTermMarkup(term, index > 0, index), likeStep >= 1 ? colors.get(index) : '')).join('');
+    if (likeStep === 1) note.textContent = '相同顏色的項屬於同一組。';
+    if (likeStep === 2) {
+      likeResult.innerHTML = combined.map(group =>
+        '<div class="like-readout like-formula">(' + group.indices.map(index => {
+          const coefficient = terms[index][0];
+          const amount = coefficient < 0 ? '(−' + Math.abs(coefficient) + ')' : coefficient;
+          return '<span data-coefficient-target="' + index + '">' + amount + '</span>';
+        }).join(' + ') + ')' + mathMarkup(factorFormula(group.factors)) + ' = ' +
+        likeTermMarkup([group.coefficient, group.coefficient ? group.factors : {}]) + '</div>'
+      ).join('');
+      note.textContent = '係數連同正負號相加，字母和指數照寫。';
+      likeResult.querySelectorAll('[data-coefficient-target]').forEach((target, index) => {
+        const source = likeExpression.querySelector('[data-coefficient-source="' + target.dataset.coefficientTarget + '"]');
+        const from = source.getBoundingClientRect();
+        const to = target.getBoundingClientRect();
+        animate(target, [
+          { opacity: .15, transform: 'translate(' + (from.left - to.left) + 'px,' + (from.top - to.top) + 'px)' },
+          { opacity: 1, transform: 'none' }
+        ], { duration: 560, delay: index * 210, fill: 'backwards' });
+      });
+    }
+    if (likeStep === 3) {
+      const simplified = [...groups.values()].filter(group => group.coefficient !== 0);
+      likeResult.innerHTML = '<div class="like-readout like-formula">' +
+        (simplified.map((group, index) =>
+          likeTermMarkup([group.coefficient, group.factors], index > 0)).join(' ') || '0') + '</div>';
+      const unchanged = [...groups.values()].some(group => group.indices.length === 1);
+      note.textContent = [combined.some(group => !group.coefficient) ? '係數相加得 0 的項可以省略。' : '',
+        unchanged ? '沒有同類項可以合併的項照寫。' : ''].filter(Boolean).join('');
+    }
+  }
+
+  function renderLike() {
+    cancelEffects();
+    const lesson = likeLessons[likeSelection];
+    const labels = lesson.pairs ? ['題目', '比字母', '比指數', '判斷'] : ['題目', '找同類項', '加係數', '化簡'];
+    if (!likeSteps.children.length || likeSteps.firstElementChild.dataset.kind !== labels[1]) {
+      likeSteps.innerHTML = labels.map((label, index) =>
+        '<button type="button" data-like-step="' + index + '" data-kind="' + labels[1] + '">' + label + '</button>').join('');
+    }
+    [...likeSteps.children].forEach((button, index) => {
+      if (index === likeStep) button.setAttribute('aria-current', 'step');
+      else button.removeAttribute('aria-current');
+    });
+    const multiple = lesson.pairs?.length > 1;
+    likeCases.hidden = !multiple;
+    if (multiple && !likeCases.children.length) {
+      likeCases.innerHTML = lesson.pairs.map((_, index) =>
+        '<button type="button" data-like-case="' + index + '" aria-label="第 ' + (index + 1) + ' 組">' + (index + 1) + '</button>').join('');
+    }
+    [...likeCases.children].forEach((button, index) => {
+      if (index === likeCase) button.setAttribute('aria-current', 'true');
+      else button.removeAttribute('aria-current');
+    });
+    likeResult.replaceChildren();
+    id('like-note').textContent = '';
+    if (lesson.pairs) renderComparison(lesson.pairs[likeCase]);
+    else renderCombination(lesson.terms);
+    if (likeStep > 0) {
+      animate(likeStep === 1 && lesson.terms ? likeExpression : likeResult,
+        [{ opacity: .2 }, { opacity: 1 }], { duration: 360 });
+    }
+    const moreCases = multiple && likeCase < lesson.pairs.length - 1;
+    const practice = likeSelection >= 2 && likeStep === 0;
+    const label = practice ? '顯示解法' : likeStep === 3 && moreCases ? '下一組' : '下一步';
+    likeNext.setAttribute('aria-label', label);
+    likeNext.title = label;
+    likeNext.firstElementChild.className = 'icon ' + (practice ? 'icon--reveal' : 'icon--step');
+    likeNext.disabled = likeStep === 3 && !moreCases;
+    id('like-prev').disabled = likeStep === 0;
+  }
+
+  function loadLike(index) {
+    stop();
+    clearTimeout(assemblyTimer);
+    clearTimeout(countTimer);
+    clearTimeout(verifyTimer);
+    demoPanel.hidden = true;
+    solvePanel.hidden = true;
+    likePanel.hidden = false;
+    [...exampleButtons, ...solveButtons].forEach(button => button.setAttribute('aria-pressed', false));
+    likeButtons.forEach((button, position) => button.setAttribute('aria-pressed', position === index));
+    likeSelection = index;
+    likeCase = 0;
+    likeStep = 0;
+    renderLike();
+  }
+
+  likeButtons.forEach((button, index) => button.addEventListener('click', () => loadLike(index)));
+  likeSteps.addEventListener('click', event => {
+    const button = event.target.closest('[data-like-step]');
+    if (button) {
+      likeStep = Number(button.dataset.likeStep);
+      renderLike();
+    }
+  });
+  likeCases.addEventListener('click', event => {
+    const button = event.target.closest('[data-like-case]');
+    if (button) {
+      likeCase = Number(button.dataset.likeCase);
+      likeStep = 0;
+      renderLike();
+    }
+  });
+  id('like-reset').addEventListener('click', () => { likeStep = 0; renderLike(); });
+  id('like-prev').addEventListener('click', () => { likeStep -= 1; renderLike(); });
+  likeNext.addEventListener('click', () => {
+    if (likeStep === 3) {
+      likeCase += 1;
+      likeStep = 0;
+    } else likeStep += 1;
+    renderLike();
   });
   loadExample(0);
 </script>
