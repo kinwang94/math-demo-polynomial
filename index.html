@@ -158,6 +158,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
 .examples { display: grid; gap: 6px; }
 .topic-label { grid-column: 1 / -1; color: var(--muted); font-size: .8125rem; font-weight: 700; }
 .topic-divider { margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+.topic-subheading { grid-column: 1 / -1; margin-block: 3px 0; color: var(--blue); font-size: .8125rem; font-weight: 700; }
 .examples button { padding: 0 4px; white-space: nowrap; }
 .examples button[aria-pressed="true"] { border-color: var(--blue); background: var(--blue); color: white; }
 @media (min-width: 621px) {
@@ -388,6 +389,10 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
 .like-mark { color: var(--like-color); background: var(--like-fill); border-color: var(--like-edge); }
 .like-readout { width: 100%; font: clamp(1.1rem, 3vw, 1.55rem)/1.6 var(--math); }
 .like-readout > span { display: inline-block; }
+.like-derivation { display: grid; width: max-content; max-width: 100%; margin: 0 auto; row-gap: 8px; text-align: left; }
+.like-equation { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: .35em; align-items: baseline; }
+.like-line { display: flex; flex-wrap: wrap; gap: 2px .38em; }
+.like-part { display: inline-block; padding-inline: .2em; border-radius: 4px; white-space: nowrap; }
 .like-result { margin-top: 12px; color: var(--blue); font-weight: 700; }
 .like-unequal { color: #96354a; background: #fff0f1; border-color: #efc8d0; }
 .like-note { margin-top: 10px; color: var(--muted); font-size: .9rem; }
@@ -457,11 +462,13 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     <button type="button" data-solve="1" aria-pressed="false">例 4</button>
     <button type="button" data-solve="2" aria-pressed="false">例 5</button>
     <p class="topic-label topic-divider">同類項</p>
+    <p class="topic-subheading">辨認</p>
     <button type="button" data-like="0" aria-pressed="false" aria-label="同類項例 1">例 1</button>
-    <button type="button" data-like="1" aria-pressed="false" aria-label="同類項例 2">例 2</button>
     <button type="button" data-like="2" aria-pressed="false" aria-label="同類項練習 1">練習 1</button>
     <button type="button" data-like="3" aria-pressed="false" aria-label="同類項練習 2">練習 2</button>
     <button type="button" data-like="4" aria-pressed="false" aria-label="同類項練習 3">練習 3</button>
+    <p class="topic-subheading">合併</p>
+    <button type="button" data-like="1" aria-pressed="false" aria-label="同類項例 2">例 2</button>
     <button type="button" data-like="5" aria-pressed="false" aria-label="同類項練習 4">練習 4</button>
     <button type="button" data-like="6" aria-pressed="false" aria-label="同類項練習 5">練習 5</button>
   </nav>
@@ -1486,15 +1493,31 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     likeExpression.innerHTML = terms.map((term, index) =>
       likeTile(likeTermMarkup(term, index > 0, index), likeStep >= 1 ? colors.get(index) : '')).join('');
     if (likeStep === 1) note.textContent = '相同顏色的項屬於同一組。';
+    if (likeStep < 2) return;
+
+    const allGroups = [...groups.values()];
+    function part(group, content) {
+      const color = colors.get(group.indices[0]);
+      return '<span class="like-part' + (color ? ' like-mark ' + color : '') + '">' + content + '</span>';
+    }
+    const grouped = allGroups.map((group, index) => {
+      if (group.indices.length === 1) return part(group, likeTermMarkup(terms[group.indices[0]], index > 0));
+      const coefficients = group.indices.map(termIndex => {
+        const coefficient = terms[termIndex][0];
+        const amount = coefficient < 0 ? '(−' + Math.abs(coefficient) + ')' : coefficient;
+        return '<span data-coefficient-target="' + termIndex + '">' + amount + '</span>';
+      }).join(' + ');
+      return part(group, (index > 0 ? '+ ' : '') + '(' + coefficients + ')' + mathMarkup(factorFormula(group.factors)));
+    }).join(' ');
+    const simplified = allGroups.filter(group => group.coefficient !== 0);
+    const answer = simplified.map((group, index) =>
+      part(group, likeTermMarkup([group.coefficient, group.factors], index > 0))).join(' ') || '0';
+    likeResult.innerHTML = '<div class="like-readout like-formula like-derivation">' +
+      '<div class="like-equation"><span>=</span><div class="like-line like-grouped">' + grouped + '</div></div>' +
+      (likeStep === 3 ? '<div class="like-equation"><span>=</span><div class="like-line like-simplified">' +
+        answer + '</div></div>' : '') + '</div>';
+
     if (likeStep === 2) {
-      likeResult.innerHTML = combined.map(group =>
-        '<div class="like-readout like-formula">(' + group.indices.map(index => {
-          const coefficient = terms[index][0];
-          const amount = coefficient < 0 ? '(−' + Math.abs(coefficient) + ')' : coefficient;
-          return '<span data-coefficient-target="' + index + '">' + amount + '</span>';
-        }).join(' + ') + ')' + mathMarkup(factorFormula(group.factors)) + ' = ' +
-        likeTermMarkup([group.coefficient, group.coefficient ? group.factors : {}]) + '</div>'
-      ).join('');
       note.textContent = '係數連同正負號相加，字母和指數照寫。';
       likeResult.querySelectorAll('[data-coefficient-target]').forEach((target, index) => {
         const source = likeExpression.querySelector('[data-coefficient-source="' + target.dataset.coefficientTarget + '"]');
@@ -1507,13 +1530,13 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
       });
     }
     if (likeStep === 3) {
-      const simplified = [...groups.values()].filter(group => group.coefficient !== 0);
-      likeResult.innerHTML = '<div class="like-readout like-formula">' +
-        (simplified.map((group, index) =>
-          likeTermMarkup([group.coefficient, group.factors], index > 0)).join(' ') || '0') + '</div>';
-      const unchanged = [...groups.values()].some(group => group.indices.length === 1);
+      const unchanged = allGroups.some(group => group.indices.length === 1);
       note.textContent = [combined.some(group => !group.coefficient) ? '係數相加得 0 的項可以省略。' : '',
         unchanged ? '沒有同類項可以合併的項照寫。' : ''].filter(Boolean).join('');
+      animate(likeResult.querySelector('.like-simplified'), [
+        { opacity: 0, transform: 'translateY(-10px)' },
+        { opacity: 1, transform: 'none' }
+      ], { duration: 470 });
     }
   }
 
@@ -1543,7 +1566,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     id('like-note').textContent = '';
     if (lesson.pairs) renderComparison(lesson.pairs[likeCase]);
     else renderCombination(lesson.terms);
-    if (likeStep > 0) {
+    if (likeStep > 0 && (lesson.pairs || likeStep !== 3)) {
       animate(likeStep === 1 && lesson.terms ? likeExpression : likeResult,
         [{ opacity: .2 }, { opacity: 1 }], { duration: 360 });
     }
@@ -1566,14 +1589,14 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     solvePanel.hidden = true;
     likePanel.hidden = false;
     [...exampleButtons, ...solveButtons].forEach(button => button.setAttribute('aria-pressed', false));
-    likeButtons.forEach((button, position) => button.setAttribute('aria-pressed', position === index));
+    likeButtons.forEach(button => button.setAttribute('aria-pressed', Number(button.dataset.like) === index));
     likeSelection = index;
     likeCase = 0;
     likeStep = 0;
     renderLike();
   }
 
-  likeButtons.forEach((button, index) => button.addEventListener('click', () => loadLike(index)));
+  likeButtons.forEach(button => button.addEventListener('click', () => loadLike(Number(button.dataset.like))));
   likeSteps.addEventListener('click', event => {
     const button = event.target.closest('[data-like-step]');
     if (button) {
