@@ -379,8 +379,11 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
 .like-cases { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-bottom: 14px; }
 .like-cases button { width: 44px; }
 .like-cases button[aria-current] { background: #eaf2ff; color: var(--blue); border-color: var(--blue); }
-.like-expression, .like-work { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; margin: 18px 0; }
-.like-expression { font: clamp(1.25rem, 3.8vw, 2.4rem)/1.5 var(--math); }
+.like-expression { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; margin: 18px 0; font: clamp(1.25rem, 3.8vw, 2.4rem)/1.5 var(--math); }
+#like-steps.is-comparison { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.like-comparison { display: grid; width: max-content; max-width: 100%; margin: 0 auto; gap: 8px; }
+.like-comparison-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 6px; }
+.like-comparison-label { font: 700 .9rem/1.4 var(--sans); color: var(--muted); }
 .like-term { padding: 5px 12px; border: 1px solid var(--line); border-radius: 8px; background: white; white-space: nowrap; }
 .like-term sup, .like-formula sup { font-size: .65em; line-height: 0; }
 .like-a { --like-color: #204e92; --like-fill: #eaf2ff; --like-edge: #c0d5f6; }
@@ -1437,41 +1440,38 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     const factors = pair.map(([, letters]) => letters);
     const sameLetters = factorKey(factors[0], false) === factorKey(factors[1], false);
     const samePowers = factorKey(factors[0]) === factorKey(factors[1]);
-    const showLetters = likeStep === 1;
+    const letters = factors.map(letters => Object.keys(letters).sort());
+    const constants = !letters[0].length && !letters[1].length;
     const note = id('like-note');
     const hint = id('like-hint');
-    hint.textContent = ['這兩項是同類項嗎？', '比較所含的字母', '比較相同字母的指數', '判斷'][likeStep];
-    likeExpression.innerHTML = pair.map(term => likeTile(likeTermMarkup(term))).join('<span>與</span>');
+    const judging = likeStep === 2;
+    const mark = judging ? (samePowers ? 'like-a' : 'like-unequal') : '';
+    hint.textContent = ['這兩項是同類項嗎？', '比較兩項的字母部分', '判斷'][likeStep];
+    likeExpression.innerHTML = pair.map(term => likeTile(likeTermMarkup(term), mark)).join('<span>與</span>');
 
-    if (likeStep === 1 || likeStep === 2) {
-      if (!showLetters && !sameLetters) {
-        note.textContent = '字母不同，已可判斷不是同類項。';
-        return;
+    if (likeStep === 1) {
+      function row(label, values, match) {
+        const [left, right] = values.map(value => likeTile(value ? mathMarkup(value) : '沒有字母',
+          match ? 'like-a' : 'like-unequal'));
+        return '<div class="like-comparison-row"><span class="like-comparison-label">' + label + '</span>' +
+          left + '<span>' + (match ? '=' : '≠') + '</span>' + right + '</div>';
       }
-      const compare = factors.map(letters => showLetters ? Object.keys(letters).sort().join('、') :
-        factorFormula(Object.fromEntries(Object.entries(letters).sort()), true));
-      const match = showLetters ? sameLetters : samePowers;
-      likeResult.innerHTML = '<div class="like-work like-readout">' +
-        compare.map(value => likeTile(value ? mathMarkup(value) : '沒有字母', match ? 'like-a' : 'like-unequal')).join(
-          '<span>' + (match ? '=' : '≠') + '</span>') + '</div>';
-      note.textContent = showLetters ? (sameLetters ? '所含字母相同。' : '所含字母不同。') :
-        (samePowers ? '各字母的指數相同。' : '相同字母的指數不同。');
-      likeResult.querySelectorAll('.like-term').forEach((target, index) => {
-        const from = likeExpression.querySelectorAll('.like-term')[index].getBoundingClientRect();
-        const to = target.getBoundingClientRect();
-        const x = from.left + from.width / 2 - to.left - to.width / 2;
-        animate(target, [
-          { opacity: .1, transform: 'translate(' + x + 'px,' + (from.top - to.top) + 'px)' },
+      const letterRow = row('字母', letters.map(list => list.join('、')), sameLetters);
+      const exponentRow = sameLetters && !constants ? row('指數', factors.map((powers, index) =>
+        factorFormula(Object.fromEntries(letters[index].map(letter => [letter, powers[letter]])), true)), samePowers) : '';
+      likeResult.innerHTML = '<div class="like-readout like-comparison">' + letterRow + exponentRow + '</div>';
+      if (!sameLetters) note.textContent = '字母不同，無須比較指數。';
+      likeResult.querySelectorAll('.like-comparison-row').forEach((comparison, index) => {
+        animate(comparison, [
+          { opacity: 0, transform: 'translateY(-8px)' },
           { opacity: 1, transform: 'none' }
-        ], { duration: 420, delay: index * 170, fill: 'backwards' });
+        ], { duration: 400, delay: index * 230, fill: 'backwards' });
       });
     }
-    if (likeStep === 3) {
-      likeExpression.innerHTML = pair.map(term =>
-        likeTile(likeTermMarkup(term), samePowers ? 'like-a' : 'like-unequal')).join('<span>與</span>');
+    if (judging) {
       likeResult.textContent = samePowers ? '是同類項' : '不是同類項';
       note.textContent = !sameLetters ? '所含字母不同。' : !samePowers ? '相同字母的指數不同。' :
-        !Object.keys(factors[0]).length ? '兩項都是常數。' : '所含字母和各字母的指數都相同，字母次序和係數不影響判斷。';
+        constants ? '兩項都是常數。' : '所含字母和各字母的指數都相同，字母次序和係數不影響判斷。';
     }
   }
 
@@ -1543,8 +1543,10 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   function renderLike() {
     cancelEffects();
     const lesson = likeLessons[likeSelection];
-    const labels = lesson.pairs ? ['題目', '比字母', '比指數', '判斷'] : ['題目', '找同類項', '加係數', '化簡'];
+    const labels = lesson.pairs ? ['題目', '比字母和指數', '判斷'] : ['題目', '找同類項', '加係數', '化簡'];
+    const atEnd = likeStep === labels.length - 1;
     if (!likeSteps.children.length || likeSteps.firstElementChild.dataset.kind !== labels[1]) {
+      likeSteps.classList.toggle('is-comparison', Boolean(lesson.pairs));
       likeSteps.innerHTML = labels.map((label, index) =>
         '<button type="button" data-like-step="' + index + '" data-kind="' + labels[1] + '">' + label + '</button>').join('');
     }
@@ -1566,17 +1568,17 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     id('like-note').textContent = '';
     if (lesson.pairs) renderComparison(lesson.pairs[likeCase]);
     else renderCombination(lesson.terms);
-    if (likeStep > 0 && (lesson.pairs || likeStep !== 3)) {
+    if (lesson.pairs ? atEnd : likeStep > 0 && !atEnd) {
       animate(likeStep === 1 && lesson.terms ? likeExpression : likeResult,
         [{ opacity: .2 }, { opacity: 1 }], { duration: 360 });
     }
     const moreCases = multiple && likeCase < lesson.pairs.length - 1;
     const practice = likeSelection >= 2 && likeStep === 0;
-    const label = practice ? '顯示解法' : likeStep === 3 && moreCases ? '下一組' : '下一步';
+    const label = practice ? '顯示解法' : atEnd && moreCases ? '下一組' : '下一步';
     likeNext.setAttribute('aria-label', label);
     likeNext.title = label;
     likeNext.firstElementChild.className = 'icon ' + (practice ? 'icon--reveal' : 'icon--step');
-    likeNext.disabled = likeStep === 3 && !moreCases;
+    likeNext.disabled = atEnd && !moreCases;
     id('like-prev').disabled = likeStep === 0;
   }
 
@@ -1615,7 +1617,7 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
   id('like-reset').addEventListener('click', () => { likeStep = 0; renderLike(); });
   id('like-prev').addEventListener('click', () => { likeStep -= 1; renderLike(); });
   likeNext.addEventListener('click', () => {
-    if (likeStep === 3) {
+    if (likeStep === likeSteps.children.length - 1) {
       likeCase += 1;
       likeStep = 0;
     } else likeStep += 1;
