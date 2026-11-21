@@ -381,9 +381,13 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
 .like-cases button[aria-current] { background: #eaf2ff; color: var(--blue); border-color: var(--blue); }
 .like-expression { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; margin: 18px 0; font: clamp(1.25rem, 3.8vw, 2.4rem)/1.5 var(--math); }
 #like-steps.is-comparison { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.like-comparison { display: grid; width: max-content; max-width: 100%; margin: 0 auto; gap: 8px; }
-.like-comparison-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 6px; }
+.like-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 34rem; margin: 0 auto; }
+.like-comparison-pane { display: grid; justify-items: center; gap: 8px; padding-inline: clamp(4px, 1.5vw, 12px); }
+.like-comparison-pane + .like-comparison-pane { border-inline-start: 1px solid var(--line); }
 .like-comparison-label { font: 700 .9rem/1.4 var(--sans); color: var(--muted); }
+.like-comparison-expression { display: flex; justify-content: center; align-items: center; gap: clamp(4px, 1vw, 8px); min-height: 2.25em; }
+.like-comparison .like-term { padding: 4px clamp(5px, 1vw, 12px); }
+.like-comparison-status { font: 500 .8rem/1.4 var(--sans); color: var(--muted); }
 .like-term { padding: 5px 12px; border: 1px solid var(--line); border-radius: 8px; background: white; white-space: nowrap; }
 .like-term sup, .like-formula sup { font-size: .65em; line-height: 0; }
 .like-a { --like-color: #204e92; --like-fill: #eaf2ff; --like-edge: #c0d5f6; }
@@ -1450,19 +1454,21 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
     likeExpression.innerHTML = pair.map(term => likeTile(likeTermMarkup(term), mark)).join('<span>與</span>');
 
     if (likeStep === 1) {
-      function row(label, values, match) {
-        const [left, right] = values.map(value => likeTile(value ? mathMarkup(value) : '沒有字母',
-          match ? 'like-a' : 'like-unequal'));
-        return '<div class="like-comparison-row"><span class="like-comparison-label">' + label + '</span>' +
-          left + '<span>' + (match ? '=' : '≠') + '</span>' + right + '</div>';
+      function comparison(values, match) {
+        return values.map(value => likeTile(value ? mathMarkup(value) : '無字母', match ? 'like-a' : 'like-unequal'))
+          .join('<span>' + (match ? '=' : '≠') + '</span>');
       }
-      const letterRow = row('字母', letters.map(list => list.join('、')), sameLetters);
-      const exponentRow = sameLetters && !constants ? row('指數', factors.map((powers, index) =>
-        factorFormula(Object.fromEntries(letters[index].map(letter => [letter, powers[letter]])), true)), samePowers) : '';
-      likeResult.innerHTML = '<div class="like-readout like-comparison">' + letterRow + exponentRow + '</div>';
-      if (!sameLetters) note.textContent = '字母不同，無須比較指數。';
-      likeResult.querySelectorAll('.like-comparison-row').forEach((comparison, index) => {
-        animate(comparison, [
+      const letterComparison = constants ? '<span class="like-comparison-status">兩項皆無字母</span>' :
+        comparison(letters.map(list => list.join('、')), sameLetters);
+      const exponentComparison = sameLetters && !constants ? comparison(factors.map((powers, index) =>
+        factorFormula(Object.fromEntries(letters[index].map(letter => [letter, powers[letter]])), true)), samePowers) :
+        '<span class="like-comparison-status">' + (constants ? '無指數' : '字母不同，略過') + '</span>';
+      likeResult.innerHTML = '<div class="like-readout like-comparison">' +
+        [['字母', letterComparison], ['指數', exponentComparison]].map(([label, content]) =>
+          '<div class="like-comparison-pane"><span class="like-comparison-label">' + label + '</span>' +
+          '<div class="like-comparison-expression">' + content + '</div></div>').join('') + '</div>';
+      likeResult.querySelectorAll('.like-comparison-pane').forEach((pane, index) => {
+        animate(pane, [
           { opacity: 0, transform: 'translateY(-8px)' },
           { opacity: 1, transform: 'none' }
         ], { duration: 400, delay: index * 230, fill: 'backwards' });
