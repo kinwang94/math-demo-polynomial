@@ -382,14 +382,23 @@ button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
 .like-expression { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; margin: 18px 0; font: clamp(1.25rem, 3.8vw, 2.4rem)/1.5 var(--math); }
 #like-steps.is-comparison { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .like-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 34rem; margin: 0 auto; }
-.like-comparison-pane { display: grid; justify-items: center; gap: 8px; padding-inline: clamp(4px, 1.5vw, 12px); }
+.like-comparison-pane { display: grid; justify-items: center; gap: 8px; padding-inline: clamp(3px, 1vw, 12px); }
 .like-comparison-pane + .like-comparison-pane { border-inline-start: 1px solid var(--line); }
 .like-comparison-label { font: 700 .9rem/1.4 var(--sans); color: var(--muted); }
 .like-comparison-expression { display: flex; justify-content: center; align-items: center; gap: clamp(4px, 1vw, 8px); min-height: 2.25em; }
-.like-comparison .like-term { padding: 4px clamp(5px, 1vw, 12px); }
+.like-comparison .like-term { padding: 4px clamp(3px, 1vw, 12px); }
 .like-comparison-status { font: 500 .8rem/1.4 var(--sans); color: var(--muted); }
 .like-term { padding: 5px 12px; border: 1px solid var(--line); border-radius: 8px; background: white; white-space: nowrap; }
 .like-term sup, .like-formula sup { font-size: .65em; line-height: 0; }
+.like-comparison .like-term sup {
+  display: inline-block;
+  padding-inline: .14em;
+  border-radius: .24em;
+  background: var(--like-edge, #f3c9d3);
+  font-size: .78em;
+  font-weight: 700;
+  line-height: 1.1;
+}
 .like-a { --like-color: #204e92; --like-fill: #eaf2ff; --like-edge: #c0d5f6; }
 .like-b { --like-color: #604593; --like-fill: #f1ecfc; --like-edge: #dacef1; }
 .like-c { --like-color: #256344; --like-fill: #eaf5ee; --like-edge: #c2e3d2; }
